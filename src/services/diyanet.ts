@@ -1,8 +1,21 @@
 import { mosqueConfig } from "../config";
 import type { AppDataState, DiyanetPrayerDay } from "../types";
 
-const API_BASE_URL = "https://ezanvakti.emushaf.net";
 const CACHE_KEY = "heidelberg-prayer-times-v1";
+const LOCAL_PRAYER_TIMES_URL = `${import.meta.env.BASE_URL}prayer-times.json`;
+
+type LocalPrayerTimesFile = {
+  source: string;
+  sourceUrl: string;
+  districtId: string;
+  city: string;
+  country: string;
+  generatedAt: string;
+  requestedYears: number[];
+  includedYears: number[];
+  note: string;
+  days: DiyanetPrayerDay[];
+};
 
 type PrayerTimesCache = {
   fetchedAt: string;
@@ -11,36 +24,47 @@ type PrayerTimesCache = {
 
 export async function getPrayerTimes(): Promise<AppDataState> {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/vakitler/${mosqueConfig.diyanetDistrictId}`,
-      { cache: "no-store" }
-    );
+    const response = await fetch(LOCAL_PRAYER_TIMES_URL, { cache: "no-cache" });
 
     if (!response.ok) {
-      throw new Error(`Diyanet API returned ${response.status}`);
+      throw new Error(`Local prayer-times file returned ${response.status}`);
     }
 
-    const days = (await response.json()) as DiyanetPrayerDay[];
+    const file = (await response.json()) as LocalPrayerTimesFile;
+    const days = file.days;
     saveCache(days);
 
-    return buildAppDataState(days, null, new Date());
+    return buildAppDataState(days, getCoverageMessage(file), new Date(file.generatedAt));
   } catch (error) {
     const cached = readCache();
 
     if (cached) {
       return buildAppDataState(
         cached.days,
-        "Canlı veri alınamadı, kayıtlı Diyanet verisi gösteriliyor.",
+        "Yerel dosya okunamadı, kayıtlı Diyanet verisi gösteriliyor.",
         new Date(cached.fetchedAt)
       );
     }
 
     return buildAppDataState(
       fallbackPrayerTimes,
-      "Canlı veri alınamadı, örnek Heidelberg vakitleri gösteriliyor.",
+      "Yerel Diyanet verisi okunamadı, örnek Heidelberg vakitleri gösteriliyor.",
       null
     );
   }
+}
+
+function getCoverageMessage(file: LocalPrayerTimesFile) {
+  const currentYear = new Intl.DateTimeFormat("de-DE", {
+    timeZone: mosqueConfig.timezone,
+    year: "numeric"
+  }).format(new Date());
+
+  if (file.includedYears.includes(Number(currentYear))) {
+    return null;
+  }
+
+  return `Yerel Diyanet dosyasında ${file.includedYears.join(", ")} verisi var.`;
 }
 
 function saveCache(days: DiyanetPrayerDay[]) {

@@ -123,7 +123,7 @@ function render() {
             </div>
             <div class="qibla-block" data-fit-boundary>
               <p class="eyebrow" data-fit data-fit-min="12">Kıble Saati</p>
-              <strong data-fit data-fit-min="18">${appData.today?.KibleSaati ?? "--:--"}</strong>
+              <strong data-fit data-fit-min="18">${appData.today?.KibleSaati || "--:--"}</strong>
               <span data-fit data-fit-min="11">Son veri ${getFormattedFetchTime(appData.fetchedAt)}</span>
             </div>
           </section>
