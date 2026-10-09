@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/prayer_time/",
+  base: "/pt_castrop/",
   build: {
     outDir: "docs"
   }

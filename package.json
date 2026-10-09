@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "fetch:prayer-times": "node scripts/fetch-prayer-times.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.3",

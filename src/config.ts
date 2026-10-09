@@ -1,13 +1,13 @@
 export const mosqueConfig = {
-  mosqueName: "Yavuz Sultan Selim Camii",
+  mosqueName: "IGMG Castrop-Rauxel Merkez Camii",
   subtitle: "Namaz Vakitleri",
-  city: "Heidelberg",
+  city: "Castrop-Rauxel",
   country: "Almanya",
   timezone: "Europe/Berlin",
-  diyanetDistrictId: "11033",
+  diyanetDistrictId: "10964",
   coordinates: {
-    latitude: 49.4094,
-    longitude: 8.6947
+    latitude: 51.5500,
+    longitude: 7.3167
   }
 } as const;
 

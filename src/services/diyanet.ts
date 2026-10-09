@@ -1,7 +1,7 @@
 import { mosqueConfig } from "../config";
 import type { AppDataState, DiyanetPrayerDay } from "../types";
 
-const CACHE_KEY = "heidelberg-prayer-times-v1";
+const CACHE_KEY = "castrop-rauxel-prayer-times-v1";
 const LOCAL_PRAYER_TIMES_URL = `${import.meta.env.BASE_URL}prayer-times.json`;
 
 type LocalPrayerTimesFile = {
@@ -48,23 +48,23 @@ export async function getPrayerTimes(): Promise<AppDataState> {
 
     return buildAppDataState(
       fallbackPrayerTimes,
-      "Yerel Diyanet verisi okunamadı, örnek Heidelberg vakitleri gösteriliyor.",
+      `Yerel Diyanet verisi okunamadı, örnek ${mosqueConfig.city} vakitleri gösteriliyor.`,
       null
     );
   }
 }
 
 function getCoverageMessage(file: LocalPrayerTimesFile) {
-  const currentYear = new Intl.DateTimeFormat("de-DE", {
-    timeZone: mosqueConfig.timezone,
-    year: "numeric"
-  }).format(new Date());
+  const todayKey = formatDiyanetDateKey(new Date());
 
-  if (file.includedYears.includes(Number(currentYear))) {
+  if (file.days.some((day) => day.MiladiTarihKisa === todayKey)) {
     return null;
   }
 
-  return `Yerel Diyanet dosyasında ${file.includedYears.join(", ")} verisi var.`;
+  const first = file.days[0]?.MiladiTarihKisa;
+  const last = file.days.at(-1)?.MiladiTarihKisa;
+
+  return `Yerel Diyanet dosyasında bugünün verisi yok (${first} – ${last}).`;
 }
 
 function saveCache(days: DiyanetPrayerDay[]) {
@@ -134,24 +134,24 @@ function addDays(date: Date, days: number) {
 
 const fallbackPrayerTimes: DiyanetPrayerDay[] = [
   {
-    HicriTarihKisa: "22.12.1447",
+    HicriTarihKisa: "28.4.1448",
     HicriTarihKisaIso8601: null,
-    HicriTarihUzun: "22 Zilhicce 1447",
+    HicriTarihUzun: "28 Rebiulahir 1448",
     HicriTarihUzunIso8601: null,
-    AyinSekliURL: "https://namazvakti.diyanet.gov.tr/images/sondordun.gif",
-    MiladiTarihKisa: "08.06.2026",
-    MiladiTarihKisaIso8601: "08.06.2026",
-    MiladiTarihUzun: "08 Haziran 2026 Pazartesi",
-    MiladiTarihUzunIso8601: "2026-06-08T00:00:00.0000000+02:00",
+    AyinSekliURL: "https://namazvakti.diyanet.gov.tr/images/sd6.gif",
+    MiladiTarihKisa: "09.10.2026",
+    MiladiTarihKisaIso8601: "09.10.2026",
+    MiladiTarihUzun: "09 Ekim 2026 Cuma",
+    MiladiTarihUzunIso8601: "2026-10-09T00:00:00.0000000+02:00",
     GreenwichOrtalamaZamani: 3,
-    Aksam: "21:35",
-    Gunes: "05:13",
-    GunesBatis: "21:28",
-    GunesDogus: "05:20",
-    Ikindi: "17:46",
-    Imsak: "03:42",
-    KibleSaati: "11:24",
-    Ogle: "13:29",
-    Yatsi: "22:56"
+    Aksam: "18:59",
+    Gunes: "07:37",
+    GunesBatis: "18:52",
+    GunesDogus: "07:44",
+    Ikindi: "16:18",
+    Imsak: "05:53",
+    KibleSaati: "10:03",
+    Ogle: "13:23",
+    Yatsi: "20:30"
   }
 ];
