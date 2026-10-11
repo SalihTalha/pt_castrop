@@ -1,0 +1,271 @@
+/* Plain CSS (no grid, flexbox, variables or clamp) so old TV browsers show the
+   same screen. The screen is a fixed 96em x 54em canvas; app.js sets the base
+   font size so it fills the TV at any resolution. */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #04333a;
+}
+
+body {
+  color: #f6fbfb;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+#screen {
+  position: relative;
+  width: 96em;
+  height: 54em;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.panel {
+  position: absolute;
+  overflow: hidden;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 0.1em solid #a5d4d1;
+  background: #0a6169;
+}
+
+.label,
+#location {
+  color: #c5e6e1;
+  font-size: 1.3em;
+  line-height: 1.2;
+}
+
+/* Top bar */
+
+#topbar {
+  left: 1em;
+  top: 1em;
+  width: 94em;
+  height: 7.4em;
+}
+
+#logo-box {
+  position: absolute;
+  left: 1em;
+  top: 0.9em;
+  width: 9.6em;
+  height: 5.4em;
+  background: #ffffff;
+}
+
+#logo {
+  display: block;
+  width: 9.6em;
+  height: 5.4em;
+}
+
+#brand {
+  position: absolute;
+  left: 12em;
+  top: 0.9em;
+  width: 58em;
+  white-space: nowrap;
+}
+
+#mosque-name {
+  font-size: 2.8em;
+  line-height: 1.2;
+}
+
+#location {
+  margin-top: 0.3em;
+}
+
+#title {
+  position: absolute;
+  right: 1.2em;
+  top: 1.1em;
+  text-align: right;
+  white-space: nowrap;
+}
+
+#title-main {
+  font-size: 2.6em;
+  line-height: 1.15;
+}
+
+#title-sub {
+  color: #fff0a6;
+  font-size: 1.6em;
+  line-height: 1.15;
+}
+
+/* Prayer cards: two columns, three rows */
+
+.prayer {
+  width: 28.6em;
+  height: 11.4em;
+}
+
+#prayer-imsak,
+#prayer-ogle,
+#prayer-aksam {
+  left: 1em;
+}
+
+#prayer-gunes,
+#prayer-ikindi,
+#prayer-yatsi {
+  left: 30.4em;
+}
+
+#prayer-imsak,
+#prayer-gunes {
+  top: 9.2em;
+}
+
+#prayer-ogle,
+#prayer-ikindi {
+  top: 21.4em;
+}
+
+#prayer-aksam,
+#prayer-yatsi {
+  top: 33.6em;
+}
+
+/* top: 50% with margin-top: -0.5em centres a one-line box vertically. */
+.prayer-name,
+.prayer-time,
+#countdown-label,
+#countdown {
+  position: absolute;
+  top: 50%;
+  margin-top: -0.5em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.prayer-name {
+  left: 0.45em;
+  font-size: 2.8em;
+}
+
+.prayer-time {
+  right: 0.22em;
+  font-size: 5.2em;
+}
+
+.prayer.is-next {
+  border-color: #ffeea2;
+  background: #138680;
+}
+
+.prayer.is-next .prayer-time {
+  color: #fff0a6;
+}
+
+.prayer.is-urgent {
+  border-color: #ffffff;
+  background: #1fa89d;
+}
+
+.prayer.is-urgent .prayer-name,
+.prayer.is-urgent .prayer-time {
+  color: #fff7bd;
+}
+
+.prayer.is-current {
+  background: #b9d4ce;
+  color: #111f22;
+}
+
+/* Right column */
+
+#clock-panel,
+#weather-panel {
+  left: 59.8em;
+  width: 35.2em;
+  text-align: center;
+}
+
+#clock-panel {
+  top: 9.2em;
+  height: 20em;
+}
+
+#weather-panel {
+  top: 30em;
+  height: 15em;
+}
+
+.stack {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+}
+
+#clock-stack {
+  margin-top: -6.6em;
+}
+
+#weather-stack {
+  margin-top: -4.2em;
+}
+
+#clock {
+  margin-top: 0.15em;
+  font-size: 5.8em;
+  line-height: 1;
+}
+
+#date {
+  margin-top: 0.4em;
+  font-size: 1.9em;
+  line-height: 1.2;
+}
+
+#hijri {
+  margin-top: 0.3em;
+  color: #fff0a6;
+  font-size: 1.4em;
+  line-height: 1.2;
+}
+
+#weather-temp {
+  margin-top: 0.2em;
+  font-size: 3.6em;
+  line-height: 1;
+}
+
+#weather-label {
+  margin-top: 0.4em;
+  color: #c5e6e1;
+  font-size: 1.6em;
+  line-height: 1.2;
+}
+
+/* Countdown bar */
+
+#countdown-panel {
+  left: 1em;
+  top: 45.8em;
+  width: 94em;
+  height: 7.2em;
+  background: #0d777d;
+}
+
+#countdown-label {
+  left: 0.6em;
+  font-size: 3em;
+}
+
+#countdown {
+  right: 0.4em;
+  color: #fff0a6;
+  font-size: 4.4em;
+}

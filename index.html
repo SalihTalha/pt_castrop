@@ -1,22 +1,56 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#062f35" />
-    <title>IGMG Castrop-Rauxel Merkez Camii Namaz Vakitleri</title>
-    <script type="module" crossorigin src="/pt_castrop/assets/index-O60cbXb8.js"></script>
-    <link rel="stylesheet" crossorigin href="/pt_castrop/assets/index-ChGmJVPj.css">
-  </head>
-  <body>
-    <div id="app">
-      <main style="min-height:100vh;display:grid;place-items:center;background:#05282c;color:white;font-family:Arial,sans-serif;text-align:center;padding:32px">
-        <div>
-          <h1 style="margin:0 0 12px;font-size:clamp(32px,6vw,72px)">IGMG Castrop-Rauxel Merkez Camii</h1>
-          <p style="margin:0;font-size:clamp(18px,3vw,32px)">Namaz vakitleri yükleniyor...</p>
-        </div>
-      </main>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IGMG Castrop-Rauxel Merkez Camii Namaz Vakitleri</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="screen">
+  <div class="panel" id="topbar">
+    <div id="logo-box"><img id="logo" src="logo.png" alt=""></div>
+    <div id="brand">
+      <div id="mosque-name">IGMG Castrop-Rauxel Merkez Camii</div>
+      <div id="location">Castrop-Rauxel, Almanya</div>
     </div>
-    <noscript>Bu ekran için JavaScript gerekli.</noscript>
-  </body>
+    <div id="title">
+      <div id="title-main">Namaz Vakitleri</div>
+      <div id="title-sub">Diyanet</div>
+    </div>
+  </div>
+
+  <div class="panel prayer" id="prayer-imsak"><span class="prayer-name">İmsak</span><span class="prayer-time" id="time-imsak">--:--</span></div>
+  <div class="panel prayer" id="prayer-gunes"><span class="prayer-name">Güneş</span><span class="prayer-time" id="time-gunes">--:--</span></div>
+  <div class="panel prayer" id="prayer-ogle"><span class="prayer-name">Öğle</span><span class="prayer-time" id="time-ogle">--:--</span></div>
+  <div class="panel prayer" id="prayer-ikindi"><span class="prayer-name">İkindi</span><span class="prayer-time" id="time-ikindi">--:--</span></div>
+  <div class="panel prayer" id="prayer-aksam"><span class="prayer-name">Akşam</span><span class="prayer-time" id="time-aksam">--:--</span></div>
+  <div class="panel prayer" id="prayer-yatsi"><span class="prayer-name">Yatsı</span><span class="prayer-time" id="time-yatsi">--:--</span></div>
+
+  <div class="panel" id="clock-panel">
+    <div class="stack" id="clock-stack">
+      <div class="label">Saat</div>
+      <div id="clock">--:--:--</div>
+      <div id="date">&nbsp;</div>
+      <div id="hijri">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="panel" id="weather-panel">
+    <div class="stack" id="weather-stack">
+      <div class="label">Hava Durumu</div>
+      <div id="weather-temp">--,- °C</div>
+      <div id="weather-label">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="panel" id="countdown-panel">
+    <span id="countdown-label">Vaktine Kalan Süre</span>
+    <span id="countdown">--:--:--</span>
+  </div>
+</div>
+<script src="prayer-times.js"></script>
+<script src="app.js"></script>
+</body>
 </html>

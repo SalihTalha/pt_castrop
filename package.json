@@ -1,16 +1,8 @@
 {
-  "name": "heidelberg-mosque-prayer-display",
-  "version": "0.1.0",
+  "name": "castrop-rauxel-prayer-display",
+  "version": "0.2.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "tsc && vite build",
-    "preview": "vite preview --host 0.0.0.0",
     "fetch:prayer-times": "node scripts/fetch-prayer-times.mjs"
-  },
-  "devDependencies": {
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5"
   }
 }
