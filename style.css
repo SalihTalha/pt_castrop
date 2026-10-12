@@ -26,6 +26,15 @@ body {
   overflow: hidden;
 }
 
+/* The mosque photo, already grey and faded into #04333a (background.jpg). */
+#backdrop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 96em;
+  height: 54em;
+}
+
 .panel {
   position: absolute;
   overflow: hidden;
@@ -33,7 +42,9 @@ body {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   border: 0.1em solid #a5d4d1;
+  /* See-through so the photo shows; browsers without rgba() keep the solid colour. */
   background: #0a6169;
+  background: rgba(10, 97, 105, 0.7);
 }
 
 .label,
@@ -165,6 +176,7 @@ body {
 .prayer.is-next {
   border-color: #ffeea2;
   background: #138680;
+  background: rgba(19, 134, 128, 0.82);
 }
 
 .prayer.is-next .prayer-time {
@@ -174,6 +186,7 @@ body {
 .prayer.is-urgent {
   border-color: #ffffff;
   background: #1fa89d;
+  background: rgba(31, 168, 157, 0.9);
 }
 
 .prayer.is-urgent .prayer-name,
@@ -183,6 +196,7 @@ body {
 
 .prayer.is-current {
   background: #b9d4ce;
+  background: rgba(185, 212, 206, 0.92);
   color: #111f22;
 }
 
@@ -260,6 +274,7 @@ body {
   width: 94em;
   height: 7.2em;
   background: #0d777d;
+  background: rgba(13, 119, 125, 0.75);
 }
 
 #countdown-label {
