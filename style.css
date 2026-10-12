@@ -119,11 +119,12 @@ body {
   line-height: 1.15;
 }
 
-/* Prayer cards: two columns, three rows */
+/* Prayer cards: two columns, three rows. The sizes below make room for the
+   hadith band; #screen.no-hadith (end of file) uses the full height. */
 
 .prayer {
   width: 28.6em;
-  height: 11.4em;
+  height: 9.4em;
 }
 
 #prayer-imsak,
@@ -145,12 +146,12 @@ body {
 
 #prayer-ogle,
 #prayer-ikindi {
-  top: 21.4em;
+  top: 19.4em;
 }
 
 #prayer-aksam,
 #prayer-yatsi {
-  top: 33.6em;
+  top: 29.6em;
 }
 
 /* top: 50% with margin-top: -0.5em centres a one-line box vertically. */
@@ -213,12 +214,12 @@ body {
 
 #clock-panel {
   top: 9.2em;
-  height: 20em;
+  height: 16.6em;
 }
 
 #weather-panel {
-  top: 30em;
-  height: 15em;
+  top: 26.6em;
+  height: 12.4em;
 }
 
 .stack {
@@ -268,13 +269,61 @@ body {
   line-height: 1.2;
 }
 
+/* Hadith band */
+
+#hadith-panel {
+  left: 1em;
+  top: 39.8em;
+  width: 94em;
+  height: 6.6em;
+}
+
+#hadith-title {
+  position: absolute;
+  left: 0.75em;
+  top: 50%;
+  width: 7.5em;
+  margin-top: -0.6em;
+  color: #fff0a6;
+  font-size: 1.4em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* display: table-cell centres the (one to three line) hadith vertically. */
+#hadith-body {
+  display: table;
+  position: absolute;
+  left: 12.5em;
+  top: 0.2em;
+  width: 80.3em;
+  height: 6em;
+}
+
+#hadith-cell {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+
+#hadith-wrap {
+  font-size: 2.1em;
+  line-height: 1.22;
+}
+
+#hadith-source {
+  color: #c5e6e1;
+  font-size: 0.8em;
+  white-space: nowrap;
+}
+
 /* Countdown bar */
 
 #countdown-panel {
   left: 1em;
-  top: 45.8em;
+  top: 47.2em;
   width: 94em;
-  height: 7.2em;
+  height: 5.8em;
   background: #0d777d;
   background: rgba(13, 119, 125, 0.75);
 }
@@ -288,4 +337,38 @@ body {
   right: 0.4em;
   color: #fff0a6;
   font-size: 4.4em;
+}
+
+/* Without hadiths the prayer cards and panels use the full height. */
+
+.no-hadith #hadith-panel {
+  display: none;
+}
+
+.no-hadith .prayer {
+  height: 11.4em;
+}
+
+.no-hadith #prayer-ogle,
+.no-hadith #prayer-ikindi {
+  top: 21.4em;
+}
+
+.no-hadith #prayer-aksam,
+.no-hadith #prayer-yatsi {
+  top: 33.6em;
+}
+
+.no-hadith #clock-panel {
+  height: 20em;
+}
+
+.no-hadith #weather-panel {
+  top: 30em;
+  height: 15em;
+}
+
+.no-hadith #countdown-panel {
+  top: 45.8em;
+  height: 7.2em;
 }

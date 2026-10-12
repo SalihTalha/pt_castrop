@@ -100,6 +100,38 @@
   }
 
   textarea { min-height: 140px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  select, input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 400;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .texts-table {
+    display: grid;
+    grid-template-columns: minmax(8em, 0.8fr) repeat(3, minmax(0, 1fr));
+    gap: 6px 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  .texts-table .head { font-size: 13px; font-weight: 700; color: var(--muted); }
+  .texts-table .key { font-size: 14px; font-weight: 600; }
+  .texts-table input { padding: 6px 8px; }
+  .text-cell { display: block; }
+  .lang-mini { display: none; }
+
+  .hadith-item { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+  .hadith-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+  .hadith-head button { padding: 4px 10px; }
+  .hadith-row { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) minmax(0, 0.42fr); gap: 6px 8px; align-items: start; margin-top: 6px; }
+  .hadith-row textarea { min-height: 52px; font-family: inherit; font-size: 14px; }
+  .lang-tag { padding-top: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+
   input[type="color"] { width: 100%; height: 38px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
   input[type="range"] { width: 100%; }
 
@@ -133,6 +165,14 @@
     main { grid-template-columns: 1fr; padding: 12px; }
     .preview-column { position: static; }
   }
+
+  @media (max-width: 600px) {
+    .texts-table, .hadith-row { grid-template-columns: 1fr; }
+    .texts-table .head { display: none; }
+    .texts-table .key { margin-top: 8px; }
+    .lang-mini { display: block; font-size: 12px; color: var(--muted); }
+    .lang-tag { padding-top: 4px; }
+  }
 </style>
 </head>
 <body>
@@ -157,12 +197,30 @@
 
   <div class="controls">
     <section>
-      <h2>Yazılar ve renkler</h2>
-      <div class="grid">
-        <label>Cami adı <input type="text" id="f-mosqueName"></label>
-        <label>Konum <input type="text" id="f-location"></label>
+      <h2>Diller ve yazılar</h2>
+      <div class="row" style="margin-top: 0">
+        <label class="inline"><input type="checkbox" id="lang-tr"> Türkçe</label>
+        <label class="inline"><input type="checkbox" id="lang-de"> Almanca</label>
+        <label class="inline"><input type="checkbox" id="lang-ar"> Arapça</label>
       </div>
-      <h3>Renkler</h3>
+      <div class="grid" style="margin-top: 10px">
+        <label>Dil kaç saniyede bir değişsin <input type="number" id="f-languageSeconds" min="3" max="300" step="1"></label>
+        <label>Önizlemede göster
+          <select id="preview-language">
+            <option value="">Sırayla (ekrandaki gibi)</option>
+            <option value="tr">Türkçe</option>
+            <option value="de">Almanca</option>
+            <option value="ar">Arapça</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint">Seçili diller ekranda sırayla gösterilir; tüm ekranlar aynı anda değişir. Saatler her dilde aynıdır. Tarih, hicri ay ve hava durumu kendiliğinden çevrilir.</p>
+      <div class="texts-table" id="texts-table"></div>
+      <p class="hint">Boş bırakılan çeviri yerine Türkçesi gösterilir. Uzun metinler kutularına sığacak kadar küçültülür.</p>
+    </section>
+
+    <section>
+      <h2>Renkler</h2>
       <div class="grid">
         <label>Arka plan <input type="color" id="f-backgroundColor"></label>
         <label>Kutular <input type="color" id="f-panelColor"></label>
@@ -196,6 +254,25 @@
           <input type="range" id="f-imageY" min="0" max="100" step="1"></label>
       </div>
       <p class="status" id="image-status"></p>
+    </section>
+
+    <section>
+      <h2>Hadisler</h2>
+      <label class="inline"><input type="checkbox" id="hadith-enabled"> Hadis bölümünü göster</label>
+      <div class="grid" style="margin-top: 10px">
+        <label>Hadis ne zaman değişsin
+          <select id="hadith-change">
+            <option value="day">Her gün</option>
+            <option value="prayer">Her namaz vaktinde</option>
+            <option value="hour">Her saat</option>
+            <option value="minutes">Belirli dakikada bir</option>
+          </select>
+        </label>
+        <label id="hadith-minutes-label">Kaç dakikada bir <input type="number" id="hadith-minutes" min="1" max="1440" step="1"></label>
+      </div>
+      <p class="hint">Hadisler sırayla gösterilir; tüm ekranlar aynı anda aynı hadisi gösterir. Hadis, ekrandaki dil değiştikçe o dilde gösterilir; o dilde metin yoksa Türkçesi gösterilir. Örnek hadisleri yayınlamadan önce kontrol edin.</p>
+      <div id="hadith-list"></div>
+      <div class="row"><button type="button" id="hadith-add">Yeni hadis ekle</button></div>
     </section>
 
     <section>
@@ -264,17 +341,164 @@
 "use strict";
 
 const DEFAULTS = {
-  version: "1",
-  mosqueName: "IGMG Castrop-Rauxel Merkez Camii",
-  location: "Castrop-Rauxel, Almanya",
-  backgroundColor: "#04333a",
-  panelColor: "#0a6169",
-  nextColor: "#138680",
-  textColor: "#f6fbfb",
-  highlightColor: "#fff0a6",
-  panelOpacity: 0.7,
-  backgroundImage: { enabled: true, grayscale: true, opacity: 0.5, zoom: 1, x: 50, y: 50 }
+  "version": "1",
+  "backgroundColor": "#04333a",
+  "panelColor": "#0a6169",
+  "nextColor": "#138680",
+  "textColor": "#f6fbfb",
+  "highlightColor": "#fff0a6",
+  "panelOpacity": 0.7,
+  "backgroundImage": {
+    "enabled": true,
+    "grayscale": true,
+    "opacity": 0.5,
+    "zoom": 1,
+    "x": 50,
+    "y": 50
+  },
+  "languages": [
+    "tr",
+    "de",
+    "ar"
+  ],
+  "languageSeconds": 10,
+  "texts": {
+    "tr": {
+      "mosqueName": "IGMG Castrop-Rauxel Merkez Camii",
+      "location": "Castrop-Rauxel, Almanya",
+      "title": "Namaz Vakitleri",
+      "imsak": "İmsak",
+      "gunes": "Güneş",
+      "ogle": "Öğle",
+      "ikindi": "İkindi",
+      "aksam": "Akşam",
+      "yatsi": "Yatsı",
+      "countdown": "{vakit} Vaktine Kalan Süre",
+      "clock": "Saat",
+      "weather": "Hava Durumu",
+      "hadith": "Hadis-i Şerif",
+      "noData": "Bugün için vakit bilgisi yok"
+    },
+    "de": {
+      "mosqueName": "IGMG Zentralmoschee Castrop-Rauxel",
+      "location": "Castrop-Rauxel, Deutschland",
+      "title": "Gebetszeiten",
+      "imsak": "Imsak",
+      "gunes": "Sonnenaufgang",
+      "ogle": "Mittag",
+      "ikindi": "Nachmittag",
+      "aksam": "Abend",
+      "yatsi": "Nacht",
+      "countdown": "Verbleibende Zeit bis {vakit}",
+      "clock": "Uhrzeit",
+      "weather": "Wetter",
+      "hadith": "Hadith",
+      "noData": "Für heute keine Gebetszeiten vorhanden"
+    },
+    "ar": {
+      "mosqueName": "مسجد IGMG المركزي في كاستروب-راوكسل",
+      "location": "كاستروب-راوكسل، ألمانيا",
+      "title": "مواقيت الصلاة",
+      "imsak": "الإمساك",
+      "gunes": "الشروق",
+      "ogle": "الظهر",
+      "ikindi": "العصر",
+      "aksam": "المغرب",
+      "yatsi": "العشاء",
+      "countdown": "الوقت المتبقي حتى {vakit}",
+      "clock": "الساعة",
+      "weather": "الطقس",
+      "hadith": "حديث شريف",
+      "noData": "لا توجد مواقيت لهذا اليوم"
+    }
+  },
+  "hadiths": {
+    "enabled": true,
+    "change": "prayer",
+    "minutes": 30,
+    "items": [
+      {
+        "text": {
+          "tr": "Ameller ancak niyetlere göredir.",
+          "de": "Die Taten werden nur nach den Absichten beurteilt.",
+          "ar": "إنما الأعمال بالنيات"
+        },
+        "source": {
+          "tr": "Buhârî, Müslim",
+          "de": "Buchari, Muslim",
+          "ar": "البخاري ومسلم"
+        }
+      },
+      {
+        "text": {
+          "tr": "Sizin en hayırlınız, Kur'an'ı öğrenen ve öğretendir.",
+          "de": "Der Beste unter euch ist, wer den Koran lernt und ihn lehrt.",
+          "ar": "خيركم من تعلم القرآن وعلمه"
+        },
+        "source": {
+          "tr": "Buhârî",
+          "de": "Buchari",
+          "ar": "البخاري"
+        }
+      },
+      {
+        "text": {
+          "tr": "Temizlik imanın yarısıdır.",
+          "de": "Die Reinheit ist die Hälfte des Glaubens.",
+          "ar": "الطهور شطر الإيمان"
+        },
+        "source": {
+          "tr": "Müslim",
+          "de": "Muslim",
+          "ar": "مسلم"
+        }
+      },
+      {
+        "text": {
+          "tr": "Kolaylaştırınız, zorlaştırmayınız; müjdeleyiniz, nefret ettirmeyiniz.",
+          "de": "Macht es leicht und macht es nicht schwer; verkündet frohe Botschaft und schreckt nicht ab.",
+          "ar": "يسروا ولا تعسروا، وبشروا ولا تنفروا"
+        },
+        "source": {
+          "tr": "Buhârî, Müslim",
+          "de": "Buchari, Muslim",
+          "ar": "البخاري ومسلم"
+        }
+      },
+      {
+        "text": {
+          "tr": "Sizden biriniz, kendisi için istediğini kardeşi için de istemedikçe gerçek anlamda iman etmiş olmaz.",
+          "de": "Keiner von euch ist wahrhaft gläubig, bis er für seinen Bruder wünscht, was er für sich selbst wünscht.",
+          "ar": "لا يؤمن أحدكم حتى يحب لأخيه ما يحب لنفسه"
+        },
+        "source": {
+          "tr": "Buhârî, Müslim",
+          "de": "Buchari, Muslim",
+          "ar": "البخاري ومسلم"
+        }
+      },
+      {
+        "text": {
+          "tr": "Kardeşine gülümsemen sadakadır.",
+          "de": "Dein Lächeln gegenüber deinem Bruder ist für dich eine Sadaqa.",
+          "ar": "تبسمك في وجه أخيك لك صدقة"
+        },
+        "source": {
+          "tr": "Tirmizî",
+          "de": "Tirmidhi",
+          "ar": "الترمذي"
+        }
+      }
+    ]
+  }
 };
+const LANGS = [["tr", "Türkçe"], ["de", "Almanca"], ["ar", "Arapça"]];
+const TEXT_FIELDS = [
+  ["mosqueName", "Cami adı"], ["location", "Konum"], ["title", "Başlık"],
+  ["imsak", "İmsak"], ["gunes", "Güneş"], ["ogle", "Öğle"], ["ikindi", "İkindi"], ["aksam", "Akşam"], ["yatsi", "Yatsı"],
+  ["countdown", "Geri sayım ({vakit} = vakit adı)"], ["clock", "Saat başlığı"], ["weather", "Hava durumu başlığı"],
+  ["hadith", "Hadis başlığı"], ["noData", "Vakit bilgisi yoksa"]
+];
 const SCREEN_W = 1920;
 const SCREEN_H = 1080;
 const IMAGE_FADE_PX = 220;
@@ -283,8 +507,8 @@ const PRAYER_KEYS = ["imsak", "gunes", "ogle", "ikindi", "aksam", "yatsi"];
 const STORAGE = { token: "prayerAdmin.token", repo: "prayerAdmin.repo", branch: "prayerAdmin.branch" };
 
 const state = {
-  settings: clone(DEFAULTS),
-  saved: clone(DEFAULTS),        // settings as last loaded or published
+  settings: null,
+  saved: null,                   // settings as last loaded or published
   prayer: { city: "Castrop-Rauxel", districtId: "10964", days: {} },
   pendingDays: {},               // added here, merged into the newest file on save
   image: null,                   // source photo used to build background.jpg
@@ -298,8 +522,11 @@ const $ = (id) => document.getElementById(id);
 
 const percent = (value) => `%${value}`;
 const FIELDS = [
-  { id: "mosqueName", read: (s) => s.mosqueName, write: (s, v) => { s.mosqueName = v; } },
-  { id: "location", read: (s) => s.location, write: (s, v) => { s.location = v; } },
+  {
+    id: "languageSeconds",
+    read: (s) => s.languageSeconds,
+    write: (s, v) => { s.languageSeconds = Math.min(300, Math.max(3, Math.round(v) || 10)); }
+  },
   { id: "backgroundColor", read: (s) => s.backgroundColor, write: (s, v) => { s.backgroundColor = v; } },
   { id: "panelColor", read: (s) => s.panelColor, write: (s, v) => { s.panelColor = v; } },
   { id: "nextColor", read: (s) => s.nextColor, write: (s, v) => { s.nextColor = v; } },
@@ -337,6 +564,15 @@ function fillForm() {
     }
     showFieldValue(field, value);
   }
+  for (const [lang] of LANGS) {
+    $(`lang-${lang}`).checked = state.settings.languages.includes(lang);
+  }
+  $("hadith-enabled").checked = state.settings.hadiths.enabled !== false;
+  $("hadith-change").value = state.settings.hadiths.change || "day";
+  $("hadith-minutes").value = state.settings.hadiths.minutes || 30;
+  showHadithMinutes();
+  renderTextsTable();
+  renderHadithList();
 }
 
 function showFieldValue(field, value) {
@@ -350,7 +586,7 @@ for (const field of FIELDS) {
   const input = $(`f-${field.id}`);
   input.addEventListener("input", () => {
     const value = input.type === "checkbox" ? input.checked
-      : input.type === "range" ? Number(input.value)
+      : input.type === "range" || input.type === "number" ? Number(input.value)
       : input.value;
     field.write(state.settings, value);
     showFieldValue(field, value);
@@ -359,11 +595,146 @@ for (const field of FIELDS) {
 }
 
 $("reset-look").addEventListener("click", () => {
-  const keep = { version: state.settings.version, mosqueName: state.settings.mosqueName, location: state.settings.location };
-  state.settings = { ...clone(DEFAULTS), ...keep };
+  for (const key of ["backgroundColor", "panelColor", "nextColor", "textColor", "highlightColor", "panelOpacity"]) {
+    state.settings[key] = DEFAULTS[key];
+  }
   fillForm();
   changed();
 });
+
+// ---------- Languages and texts ----------
+
+for (const [lang] of LANGS) {
+  $(`lang-${lang}`).addEventListener("input", () => {
+    const chosen = LANGS.map(([code]) => code).filter((code) => $(`lang-${code}`).checked);
+    if (!chosen.length) {
+      $(`lang-${lang}`).checked = true;
+      return;
+    }
+    state.settings.languages = chosen;
+    changed();
+  });
+}
+
+$("preview-language").addEventListener("change", updatePreview);
+
+function renderTextsTable() {
+  const table = $("texts-table");
+  table.textContent = "";
+  table.append(element("span", "head", ""), ...LANGS.map(([, name]) => element("span", "head", name)));
+  for (const [key, label] of TEXT_FIELDS) {
+    table.append(element("span", "key", label));
+    for (const [lang, name] of LANGS) {
+      const cell = element("label", "text-cell", "");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.dir = lang === "ar" ? "rtl" : "ltr";
+      input.value = (state.settings.texts[lang] || {})[key] ?? "";
+      input.addEventListener("input", () => {
+        state.settings.texts[lang] = state.settings.texts[lang] || {};
+        state.settings.texts[lang][key] = input.value;
+        changed();
+      });
+      cell.append(element("span", "lang-mini", name), input);
+      table.append(cell);
+    }
+  }
+}
+
+// ---------- Hadiths ----------
+
+$("hadith-enabled").addEventListener("input", () => {
+  state.settings.hadiths.enabled = $("hadith-enabled").checked;
+  changed();
+});
+$("hadith-change").addEventListener("change", () => {
+  state.settings.hadiths.change = $("hadith-change").value;
+  showHadithMinutes();
+  changed();
+});
+$("hadith-minutes").addEventListener("input", () => {
+  state.settings.hadiths.minutes = Math.min(1440, Math.max(1, Math.round(Number($("hadith-minutes").value)) || 30));
+  changed();
+});
+$("hadith-add").addEventListener("click", () => {
+  state.settings.hadiths.items.push({ text: { tr: "", de: "", ar: "" }, source: { tr: "", de: "", ar: "" } });
+  renderHadithList();
+  const boxes = document.querySelectorAll("#hadith-list textarea");
+  boxes[boxes.length - 3]?.focus();
+  changed();
+});
+
+function showHadithMinutes() {
+  $("hadith-minutes-label").style.display = $("hadith-change").value === "minutes" ? "" : "none";
+}
+
+function renderHadithList() {
+  const list = $("hadith-list");
+  const items = state.settings.hadiths.items;
+  list.textContent = "";
+  if (!items.length) {
+    list.append(element("p", "hint", "Henüz hadis yok. “Yeni hadis ekle” ile ekleyin."));
+  }
+  items.forEach((item, index) => {
+    const box = element("div", "hadith-item", "");
+    const head = element("div", "hadith-head", "");
+    const buttons = element("span", "", "");
+    const move = (to) => {
+      items.splice(to, 0, items.splice(index, 1)[0]);
+      renderHadithList();
+      changed();
+    };
+    buttons.append(
+      button("↑", index > 0 ? () => move(index - 1) : null),
+      button("↓", index < items.length - 1 ? () => move(index + 1) : null),
+      button("Sil", () => {
+        const hasText = LANGS.some(([lang]) => (item.text[lang] || "").trim());
+        if (!hasText || confirm(`${index + 1}. hadis silinsin mi?`)) {
+          items.splice(index, 1);
+          renderHadithList();
+          changed();
+        }
+      })
+    );
+    head.append(element("strong", "", `${index + 1}. hadis`), buttons);
+    box.append(head);
+    for (const [lang, name] of LANGS) {
+      const row = element("div", "hadith-row", "");
+      const text = document.createElement("textarea");
+      const source = document.createElement("input");
+      text.dir = source.dir = lang === "ar" ? "rtl" : "ltr";
+      text.value = item.text[lang] || "";
+      text.placeholder = `Hadis (${name})`;
+      source.type = "text";
+      source.value = item.source[lang] || "";
+      source.placeholder = "Kaynak";
+      text.addEventListener("input", () => { item.text[lang] = text.value; changed(); });
+      source.addEventListener("input", () => { item.source[lang] = source.value; changed(); });
+      row.append(element("span", "lang-tag", name), text, source);
+      box.append(row);
+    }
+    list.append(box);
+  });
+}
+
+function button(label, onClick) {
+  const b = element("button", "", label);
+  b.type = "button";
+  b.disabled = !onClick;
+  if (onClick) {
+    b.addEventListener("click", onClick);
+  }
+  return b;
+}
+
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) {
+    node.className = className;
+  }
+  node.textContent = text;
+  return node;
+}
 
 // ---------- Background image ----------
 
@@ -700,6 +1071,7 @@ function updatePreview() {
     return;
   }
   const url = renderBackground().toDataURL("image/jpeg", 0.85);
+  win.setDisplayLanguage($("preview-language").value || null);
   win.applyDisplaySettings(state.settings, url);
   win.PRAYER_TIMES = { ...state.prayer, days: mergedPrayerDays() };
   win.refreshPrayerDisplay();
@@ -775,6 +1147,10 @@ function saveConnection() {
 async function buildFiles(fresh) {
   const files = [];
   const settings = clone(state.settings);
+  // Drop hadiths without any text, and trim what is typed.
+  settings.hadiths.items = settings.hadiths.items
+    .map((item) => ({ text: trimAll(item.text), source: trimAll(item.source) }))
+    .filter((item) => Object.values(item.text).some(Boolean));
 
   if (settings.backgroundImage.enabled && backgroundChanged()) {
     settings.version = String(Date.now());
@@ -819,6 +1195,7 @@ $("publish").addEventListener("click", async () => {
       state.pendingDays = {};
     }
     state.newSourceBlob = null;
+    fillForm();
     changed();
     setStatus("publish-status", sha
       ? `Yayınlandı (${files.map((f) => f.path).join(", ")}).\nEkran birkaç dakika içinde güncellenir. Kayıt: https://github.com/${repo}/commit/${sha}`
@@ -916,11 +1293,11 @@ async function readRepoFile(path, asBlob = false) {
 }
 
 async function load() {
+  state.settings = normalizeSettings({});
   try {
     const settingsText = await readRepoFile("settings.js");
     if (settingsText) {
-      const loaded = parseAssigned(settingsText);
-      state.settings = { ...clone(DEFAULTS), ...loaded, backgroundImage: { ...DEFAULTS.backgroundImage, ...(loaded.backgroundImage || {}) } };
+      state.settings = normalizeSettings(parseAssigned(settingsText));
     }
   } catch (error) {
     setStatus("publish-status", `Ayarlar okunamadı, varsayılanlar gösteriliyor: ${error.message}`, "error");
@@ -958,6 +1335,42 @@ function loadConnection() {
 }
 
 // ---------- Helpers ----------
+
+function trimAll(values) {
+  const result = {};
+  for (const [lang] of LANGS) {
+    result[lang] = String((values || {})[lang] || "").trim();
+  }
+  return result;
+}
+
+// Fills in anything missing from older settings files.
+function normalizeSettings(loaded) {
+  const s = { ...clone(DEFAULTS), ...loaded };
+  s.backgroundImage = { ...DEFAULTS.backgroundImage, ...(loaded.backgroundImage || {}) };
+  s.texts = {};
+  for (const [lang] of LANGS) {
+    s.texts[lang] = { ...DEFAULTS.texts[lang], ...((loaded.texts || {})[lang] || {}) };
+  }
+  // Before translations existed the name and location were top-level fields.
+  if (loaded.mosqueName && !(loaded.texts && loaded.texts.tr && loaded.texts.tr.mosqueName)) {
+    s.texts.tr.mosqueName = loaded.mosqueName;
+  }
+  if (loaded.location && !(loaded.texts && loaded.texts.tr && loaded.texts.tr.location)) {
+    s.texts.tr.location = loaded.location;
+  }
+  delete s.mosqueName;
+  delete s.location;
+  if (!Array.isArray(s.languages) || !s.languages.length) {
+    s.languages = clone(DEFAULTS.languages);
+  }
+  s.hadiths = { ...clone(DEFAULTS.hadiths), ...(loaded.hadiths || {}) };
+  if (!Array.isArray(s.hadiths.items)) {
+    s.hadiths.items = clone(DEFAULTS.hadiths.items);
+  }
+  s.hadiths.items = s.hadiths.items.map((item) => ({ text: trimAll(item.text), source: trimAll(item.source) }));
+  return s;
+}
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));

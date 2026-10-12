@@ -14,41 +14,50 @@
   <div class="panel" id="topbar">
     <div id="logo-box"><img id="logo" src="logo.png" alt=""></div>
     <div id="brand">
-      <div id="mosque-name">IGMG Castrop-Rauxel Merkez Camii</div>
-      <div id="location">Castrop-Rauxel, Almanya</div>
+      <div id="mosque-name"><span class="fit" id="mosque-name-text">IGMG Castrop-Rauxel Merkez Camii</span></div>
+      <div id="location"><span class="fit" id="location-text">Castrop-Rauxel, Almanya</span></div>
     </div>
     <div id="title">
-      <div id="title-main">Namaz Vakitleri</div>
+      <div id="title-main"><span class="fit" id="title-text">Namaz Vakitleri</span></div>
       <div id="title-sub">Diyanet</div>
     </div>
   </div>
 
-  <div class="panel prayer" id="prayer-imsak"><span class="prayer-name">İmsak</span><span class="prayer-time" id="time-imsak">--:--</span></div>
-  <div class="panel prayer" id="prayer-gunes"><span class="prayer-name">Güneş</span><span class="prayer-time" id="time-gunes">--:--</span></div>
-  <div class="panel prayer" id="prayer-ogle"><span class="prayer-name">Öğle</span><span class="prayer-time" id="time-ogle">--:--</span></div>
-  <div class="panel prayer" id="prayer-ikindi"><span class="prayer-name">İkindi</span><span class="prayer-time" id="time-ikindi">--:--</span></div>
-  <div class="panel prayer" id="prayer-aksam"><span class="prayer-name">Akşam</span><span class="prayer-time" id="time-aksam">--:--</span></div>
-  <div class="panel prayer" id="prayer-yatsi"><span class="prayer-name">Yatsı</span><span class="prayer-time" id="time-yatsi">--:--</span></div>
+  <div class="panel prayer" id="prayer-imsak"><span class="prayer-name"><span class="fit" id="name-imsak">İmsak</span></span><span class="prayer-time" id="time-imsak">--:--</span></div>
+  <div class="panel prayer" id="prayer-gunes"><span class="prayer-name"><span class="fit" id="name-gunes">Güneş</span></span><span class="prayer-time" id="time-gunes">--:--</span></div>
+  <div class="panel prayer" id="prayer-ogle"><span class="prayer-name"><span class="fit" id="name-ogle">Öğle</span></span><span class="prayer-time" id="time-ogle">--:--</span></div>
+  <div class="panel prayer" id="prayer-ikindi"><span class="prayer-name"><span class="fit" id="name-ikindi">İkindi</span></span><span class="prayer-time" id="time-ikindi">--:--</span></div>
+  <div class="panel prayer" id="prayer-aksam"><span class="prayer-name"><span class="fit" id="name-aksam">Akşam</span></span><span class="prayer-time" id="time-aksam">--:--</span></div>
+  <div class="panel prayer" id="prayer-yatsi"><span class="prayer-name"><span class="fit" id="name-yatsi">Yatsı</span></span><span class="prayer-time" id="time-yatsi">--:--</span></div>
 
   <div class="panel" id="clock-panel">
     <div class="stack" id="clock-stack">
-      <div class="label">Saat</div>
+      <div class="label"><span class="fit" id="clock-title">Saat</span></div>
       <div id="clock">--:--:--</div>
-      <div id="date">&nbsp;</div>
-      <div id="hijri">&nbsp;</div>
+      <div id="date"><span class="fit" id="date-text">&nbsp;</span></div>
+      <div id="hijri"><span class="fit" id="hijri-text">&nbsp;</span></div>
     </div>
   </div>
 
   <div class="panel" id="weather-panel">
     <div class="stack" id="weather-stack">
-      <div class="label">Hava Durumu</div>
+      <div class="label"><span class="fit" id="weather-title">Hava Durumu</span></div>
       <div id="weather-temp">--,- °C</div>
-      <div id="weather-label">&nbsp;</div>
+      <div id="weather-label"><span class="fit" id="weather-label-text">&nbsp;</span></div>
+    </div>
+  </div>
+
+  <div class="panel" id="hadith-panel">
+    <div id="hadith-title"><span class="fit" id="hadith-title-text">Hadis-i Şerif</span></div>
+    <div id="hadith-body">
+      <div id="hadith-cell">
+        <div id="hadith-wrap"><span id="hadith-text"></span> <span id="hadith-source"></span></div>
+      </div>
     </div>
   </div>
 
   <div class="panel" id="countdown-panel">
-    <span id="countdown-label">Vaktine Kalan Süre</span>
+    <span id="countdown-label"><span class="fit" id="countdown-label-text">Vaktine Kalan Süre</span></span>
     <span id="countdown">--:--:--</span>
   </div>
 </div>
