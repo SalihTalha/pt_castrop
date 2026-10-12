@@ -26,8 +26,10 @@ body {
   overflow: hidden;
 }
 
-/* The mosque photo, already grey and faded into #04333a (background.jpg). */
+/* The mosque photo, already grey and faded into the background colour
+   (background.jpg). app.js sets its src and shows it. */
 #backdrop {
+  display: none;
   position: absolute;
   left: 0;
   top: 0;

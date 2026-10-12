@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Yönetim · Namaz Vakitleri</title>
+<style>
+  :root {
+    --bg: #f3f6f6;
+    --card: #ffffff;
+    --text: #17262a;
+    --muted: #5b6d71;
+    --line: #d7e0e1;
+    --accent: #0a6169;
+    --accent-text: #ffffff;
+    --ok: #1d7a46;
+    --error: #b3261e;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--accent);
+    color: var(--accent-text);
+  }
+
+  header h1 { margin: 0; font-size: 20px; }
+  header a { color: var(--accent-text); }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr);
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .preview-column { position: sticky; top: 20px; align-self: start; }
+  .controls { display: grid; gap: 20px; min-width: 0; }
+
+  section {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  h2 { margin: 0 0 12px; font-size: 17px; }
+  h3 { margin: 16px 0 8px; font-size: 15px; }
+
+  .preview-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+  }
+
+  .preview-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px 16px;
+  }
+
+  label { display: grid; gap: 4px; font-weight: 600; font-size: 14px; }
+  label.inline { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  label output { font-weight: 400; color: var(--muted); }
+  .label-line { display: flex; justify-content: space-between; gap: 8px; }
+
+  input[type="text"], input[type="password"], textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 400;
+    background: #fff;
+    color: var(--text);
+  }
+
+  textarea { min-height: 140px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+  input[type="color"] { width: 100%; height: 38px; padding: 2px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  input[type="range"] { width: 100%; }
+
+  button {
+    padding: 8px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  button.primary { background: var(--accent); color: var(--accent-text); }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  .hint { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .status { margin: 10px 0 0; white-space: pre-line; }
+  .status.ok { color: var(--ok); }
+  .status.error { color: var(--error); }
+  .dirty { color: var(--error); font-weight: 600; }
+
+  details { margin-top: 12px; }
+  summary { cursor: pointer; font-weight: 600; }
+  pre { overflow-x: auto; padding: 10px; background: var(--bg); border-radius: 6px; font-size: 12.5px; }
+
+  .downloads a { margin-right: 12px; }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; padding: 12px; }
+    .preview-column { position: static; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Namaz Vakitleri · Yönetim</h1>
+  <span><span id="dirty-note"></span> <a href="./" target="_blank" rel="noopener">Ekranı aç</a></span>
+</header>
+
+<main>
+  <div class="preview-column">
+    <section>
+      <h2>Önizleme</h2>
+      <div class="preview-frame"><iframe id="preview" src="index.html" title="Ekran önizlemesi"></iframe></div>
+      <div class="row">
+        <input type="text" id="preview-time" placeholder="Örn. 18:50 veya 2026-12-31 23:58" style="flex: 1; min-width: 200px">
+        <button type="button" id="preview-time-apply">Bu zamanı göster</button>
+        <button type="button" id="preview-time-clear">Şimdiki zaman</button>
+      </div>
+      <p class="hint">Önizleme kaydedilmemiş değişiklikleri de gösterir. Ekranlar yalnızca “Kaydet ve yayınla”dan sonra değişir.</p>
+    </section>
+  </div>
+
+  <div class="controls">
+    <section>
+      <h2>Yazılar ve renkler</h2>
+      <div class="grid">
+        <label>Cami adı <input type="text" id="f-mosqueName"></label>
+        <label>Konum <input type="text" id="f-location"></label>
+      </div>
+      <h3>Renkler</h3>
+      <div class="grid">
+        <label>Arka plan <input type="color" id="f-backgroundColor"></label>
+        <label>Kutular <input type="color" id="f-panelColor"></label>
+        <label>Sıradaki vakit kutusu <input type="color" id="f-nextColor"></label>
+        <label>Yazı <input type="color" id="f-textColor"></label>
+        <label>Vurgu (sıradaki saat, geri sayım) <input type="color" id="f-highlightColor"></label>
+      </div>
+      <h3>Kutular</h3>
+      <label><span class="label-line">Kutuların saydamlığı <output id="o-panelTransparency"></output></span>
+        <input type="range" id="f-panelTransparency" min="0" max="90" step="5"></label>
+      <p class="hint">%0 tamamen dolu kutu demektir. Saydamlığı desteklemeyen çok eski TV tarayıcıları kutuları dolu gösterir.</p>
+      <div class="row"><button type="button" id="reset-look">Varsayılan renklere dön</button></div>
+    </section>
+
+    <section>
+      <h2>Arka plan resmi</h2>
+      <label class="inline"><input type="checkbox" id="f-imageEnabled"> Arka plan resmini göster</label>
+      <div class="row">
+        <label style="flex: 1">Yeni resim yükle <input type="file" id="image-file" accept="image/jpeg,image/png,image/webp"></label>
+      </div>
+      <p class="hint">Resim ekran için hazırlanır (gri ton, saydamlık, arka plan rengiyle karıştırma). TV'lerin bunları kendisinin yapması gerekmez.</p>
+      <label class="inline" style="margin-top: 10px"><input type="checkbox" id="f-imageGray"> Gri yap (renkleri kaldır)</label>
+      <div class="grid" style="margin-top: 10px">
+        <label><span class="label-line">Resmin saydamlığı <output id="o-imageTransparency"></output></span>
+          <input type="range" id="f-imageTransparency" min="0" max="95" step="5"></label>
+        <label><span class="label-line">Yakınlaştırma <output id="o-imageZoom"></output></span>
+          <input type="range" id="f-imageZoom" min="100" max="300" step="5"></label>
+        <label><span class="label-line">Yatay konum <output id="o-imageX"></output></span>
+          <input type="range" id="f-imageX" min="0" max="100" step="1"></label>
+        <label><span class="label-line">Dikey konum <output id="o-imageY"></output></span>
+          <input type="range" id="f-imageY" min="0" max="100" step="1"></label>
+      </div>
+      <p class="status" id="image-status"></p>
+    </section>
+
+    <section>
+      <h2>Namaz vakitleri</h2>
+      <p id="prayer-summary">Yükleniyor…</p>
+      <div class="row">
+        <button type="button" id="fetch-api">Önümüzdeki ayı API'den getir</button>
+      </div>
+      <p class="hint">Diyanet vakitlerini ezanvakti API'sinden alır (yaklaşık 30 gün, Castrop-Rauxel).</p>
+      <h3>JSON ile ekle</h3>
+      <textarea id="prayer-json" spellcheck="false" placeholder='{ "2026-11-11": { "imsak": "06:10", "gunes": "07:55", "ogle": "12:21", "ikindi": "14:27", "aksam": "16:50", "yatsi": "18:28", "hicri": "2 Cemaziyelahir 1448" } }'></textarea>
+      <div class="row">
+        <input type="file" id="prayer-file" accept="application/json,.json,.txt">
+        <button type="button" id="prayer-add">Vakitleri ekle</button>
+      </div>
+      <p class="status" id="prayer-status"></p>
+      <details>
+        <summary>Kabul edilen JSON biçimleri</summary>
+        <p>Tarihe göre nesne (tarih <code>YYYY-AA-GG</code> ya da <code>GG.AA.YYYY</code>):</p>
+        <pre>{
+  "2026-11-11": {
+    "imsak": "06:10", "gunes": "07:55", "ogle": "12:21",
+    "ikindi": "14:27", "aksam": "16:50", "yatsi": "18:28",
+    "hicri": "2 Cemaziyelahir 1448"
+  }
+}</pre>
+        <p>Liste (her gün kendi tarihiyle):</p>
+        <pre>[
+  { "tarih": "11.11.2026", "İmsak": "06:10", "Güneş": "07:55", "Öğle": "12:21",
+    "İkindi": "14:27", "Akşam": "16:50", "Yatsı": "18:28" }
+]</pre>
+        <p>Diyanet / ezanvakti API cevabı da olduğu gibi yapıştırılabilir (<code>MiladiTarihKisa</code>, <code>Imsak</code>, … alanları). Aynı tarih zaten varsa yeni değerler geçerli olur. <code>hicri</code> isteğe bağlıdır.</p>
+      </details>
+    </section>
+
+    <section>
+      <h2>Kaydet ve yayınla</h2>
+      <p class="hint" style="margin-top: 0">Değişiklikler GitHub deposuna kaydedilir. GitHub Pages ekranı birkaç dakika içinde günceller. TV'ler yeni ayarları her saat başı kendiliğinden alır (ya da sayfa yenilenince).</p>
+      <div class="grid" style="margin-top: 10px">
+        <label>GitHub erişim anahtarı (token) <input type="password" id="gh-token" autocomplete="off" spellcheck="false"></label>
+        <label>Depo <input type="text" id="gh-repo" spellcheck="false"></label>
+        <label>Dal (branch) <input type="text" id="gh-branch" spellcheck="false"></label>
+      </div>
+      <label class="inline" style="margin-top: 8px"><input type="checkbox" id="gh-remember"> Anahtarı bu cihazda hatırla</label>
+      <details>
+        <summary>Anahtar nasıl alınır?</summary>
+        <ol>
+          <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> sayfasını açın.</li>
+          <li>“Repository access” bölümünde <strong>Only select repositories</strong> seçip yalnızca bu depoyu seçin.</li>
+          <li>“Permissions → Repository permissions” altında <strong>Contents: Read and write</strong> verin. Başka izin gerekmez.</li>
+          <li>Bir son kullanma tarihi seçip anahtarı oluşturun ve buraya yapıştırın.</li>
+        </ol>
+        <p class="hint">Anahtar yalnızca bu tarayıcıda kalır ve sadece GitHub'a gönderilir. Paylaşılan bir bilgisayarda “hatırla” seçeneğini işaretlemeyin.</p>
+      </details>
+      <div class="row">
+        <button type="button" class="primary" id="publish">Kaydet ve yayınla</button>
+        <button type="button" id="download">Dosyaları indir</button>
+      </div>
+      <p class="status" id="publish-status"></p>
+      <p class="downloads" id="download-links"></p>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const DEFAULTS = {
+  version: "1",
+  mosqueName: "IGMG Castrop-Rauxel Merkez Camii",
+  location: "Castrop-Rauxel, Almanya",
+  backgroundColor: "#04333a",
+  panelColor: "#0a6169",
+  nextColor: "#138680",
+  textColor: "#f6fbfb",
+  highlightColor: "#fff0a6",
+  panelOpacity: 0.7,
+  backgroundImage: { enabled: true, grayscale: true, opacity: 0.5, zoom: 1, x: 50, y: 50 }
+};
+const SCREEN_W = 1920;
+const SCREEN_H = 1080;
+const IMAGE_FADE_PX = 220;
+const API_URL = "https://ezanvakti.emushaf.net/vakitler/10964";
+const PRAYER_KEYS = ["imsak", "gunes", "ogle", "ikindi", "aksam", "yatsi"];
+const STORAGE = { token: "prayerAdmin.token", repo: "prayerAdmin.repo", branch: "prayerAdmin.branch" };
+
+const state = {
+  settings: clone(DEFAULTS),
+  saved: clone(DEFAULTS),        // settings as last loaded or published
+  prayer: { city: "Castrop-Rauxel", districtId: "10964", days: {} },
+  pendingDays: {},               // added here, merged into the newest file on save
+  image: null,                   // source photo used to build background.jpg
+  newSourceBlob: null,           // a newly uploaded photo, saved as background-source.jpg
+  previewUrl: null
+};
+
+const $ = (id) => document.getElementById(id);
+
+// ---------- Settings form ----------
+
+const percent = (value) => `%${value}`;
+const FIELDS = [
+  { id: "mosqueName", read: (s) => s.mosqueName, write: (s, v) => { s.mosqueName = v; } },
+  { id: "location", read: (s) => s.location, write: (s, v) => { s.location = v; } },
+  { id: "backgroundColor", read: (s) => s.backgroundColor, write: (s, v) => { s.backgroundColor = v; } },
+  { id: "panelColor", read: (s) => s.panelColor, write: (s, v) => { s.panelColor = v; } },
+  { id: "nextColor", read: (s) => s.nextColor, write: (s, v) => { s.nextColor = v; } },
+  { id: "textColor", read: (s) => s.textColor, write: (s, v) => { s.textColor = v; } },
+  { id: "highlightColor", read: (s) => s.highlightColor, write: (s, v) => { s.highlightColor = v; } },
+  {
+    id: "panelTransparency", show: percent,
+    read: (s) => Math.round((1 - s.panelOpacity) * 100),
+    write: (s, v) => { s.panelOpacity = round2(1 - v / 100); }
+  },
+  { id: "imageEnabled", read: (s) => s.backgroundImage.enabled, write: (s, v) => { s.backgroundImage.enabled = v; } },
+  { id: "imageGray", read: (s) => s.backgroundImage.grayscale, write: (s, v) => { s.backgroundImage.grayscale = v; } },
+  {
+    id: "imageTransparency", show: percent,
+    read: (s) => Math.round((1 - s.backgroundImage.opacity) * 100),
+    write: (s, v) => { s.backgroundImage.opacity = round2(1 - v / 100); }
+  },
+  {
+    id: "imageZoom", show: percent,
+    read: (s) => Math.round(s.backgroundImage.zoom * 100),
+    write: (s, v) => { s.backgroundImage.zoom = round2(v / 100); }
+  },
+  { id: "imageX", show: percent, read: (s) => s.backgroundImage.x, write: (s, v) => { s.backgroundImage.x = v; } },
+  { id: "imageY", show: percent, read: (s) => s.backgroundImage.y, write: (s, v) => { s.backgroundImage.y = v; } }
+];
+
+function fillForm() {
+  for (const field of FIELDS) {
+    const input = $(`f-${field.id}`);
+    const value = field.read(state.settings);
+    if (input.type === "checkbox") {
+      input.checked = Boolean(value);
+    } else {
+      input.value = value;
+    }
+    showFieldValue(field, value);
+  }
+}
+
+function showFieldValue(field, value) {
+  const output = $(`o-${field.id}`);
+  if (output && field.show) {
+    output.textContent = field.show(value);
+  }
+}
+
+for (const field of FIELDS) {
+  const input = $(`f-${field.id}`);
+  input.addEventListener("input", () => {
+    const value = input.type === "checkbox" ? input.checked
+      : input.type === "range" ? Number(input.value)
+      : input.value;
+    field.write(state.settings, value);
+    showFieldValue(field, value);
+    changed();
+  });
+}
+
+$("reset-look").addEventListener("click", () => {
+  const keep = { version: state.settings.version, mosqueName: state.settings.mosqueName, location: state.settings.location };
+  state.settings = { ...clone(DEFAULTS), ...keep };
+  fillForm();
+  changed();
+});
+
+// ---------- Background image ----------
+
+$("image-file").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+  setStatus("image-status", "Resim hazırlanıyor…");
+  try {
+    const original = await blobToImage(file);
+    // Keep the source at a sensible size; the screen is 1920 x 1080.
+    const scale = Math.min(1, 2000 / Math.max(original.naturalWidth, original.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(original.naturalWidth * scale);
+    canvas.height = Math.round(original.naturalHeight * scale);
+    canvas.getContext("2d").drawImage(original, 0, 0, canvas.width, canvas.height);
+    state.newSourceBlob = await canvasToBlob(canvas, 0.88);
+    state.image = await blobToImage(state.newSourceBlob);
+    Object.assign(state.settings.backgroundImage, { enabled: true, zoom: 1, x: 50, y: 50 });
+    fillForm();
+    setStatus("image-status", `Yeni resim seçildi (${canvas.width} × ${canvas.height}). Yayınlamak için “Kaydet ve yayınla”.`, "ok");
+    changed();
+  } catch (error) {
+    setStatus("image-status", `Resim açılamadı: ${error.message}. JPEG veya PNG deneyin.`, "error");
+  }
+});
+
+// Draws the screen background exactly as the TV will show it: the photo
+// (grey if chosen) faded into the background colour, edges softened.
+function renderBackground() {
+  const s = state.settings;
+  const options = s.backgroundImage;
+  const canvas = document.createElement("canvas");
+  canvas.width = SCREEN_W;
+  canvas.height = SCREEN_H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = s.backgroundColor;
+  ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+  const image = state.image;
+  if (!image || !options.enabled) {
+    return canvas;
+  }
+
+  const scale = (SCREEN_H / image.naturalHeight) * options.zoom;
+  const width = image.naturalWidth * scale;
+  const height = image.naturalHeight * scale;
+  const left = ((SCREEN_W - width) * options.x) / 100;
+  const top = ((SCREEN_H - height) * options.y) / 100;
+
+  const layer = document.createElement("canvas");
+  layer.width = SCREEN_W;
+  layer.height = SCREEN_H;
+  const layerCtx = layer.getContext("2d", { willReadFrequently: true });
+  layerCtx.drawImage(image, left, top, width, height);
+
+  const photo = layerCtx.getImageData(0, 0, SCREEN_W, SCREEN_H).data;
+  const output = ctx.getImageData(0, 0, SCREEN_W, SCREEN_H);
+  const pixels = output.data;
+  const [bgR, bgG, bgB] = hexToRgb(s.backgroundColor);
+
+  // Soften only the photo edges that fall inside the screen.
+  const fadeX = edgeFade(SCREEN_W, left, width);
+  const fadeY = edgeFade(SCREEN_H, top, height);
+
+  for (let y = 0; y < SCREEN_H; y++) {
+    if (!fadeY[y]) {
+      continue;
+    }
+    for (let x = 0; x < SCREEN_W; x++) {
+      const i = (y * SCREEN_W + x) * 4;
+      const alpha = options.opacity * fadeX[x] * fadeY[y] * (photo[i + 3] / 255);
+      if (alpha <= 0) {
+        continue;
+      }
+      let r = photo[i];
+      let g = photo[i + 1];
+      let b = photo[i + 2];
+      if (options.grayscale) {
+        r = g = b = 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+      pixels[i] = bgR + (r - bgR) * alpha;
+      pixels[i + 1] = bgG + (g - bgG) * alpha;
+      pixels[i + 2] = bgB + (b - bgB) * alpha;
+    }
+  }
+
+  ctx.putImageData(output, 0, 0);
+  return canvas;
+}
+
+function edgeFade(size, start, length) {
+  const fade = new Float32Array(size);
+  const end = start + length;
+  for (let p = 0; p < size; p++) {
+    const centre = p + 0.5;
+    if (centre < start || centre > end) {
+      continue;
+    }
+    let f = 1;
+    if (start > 0) {
+      f = Math.min(f, (centre - start) / IMAGE_FADE_PX);
+    }
+    if (end < size) {
+      f = Math.min(f, (end - centre) / IMAGE_FADE_PX);
+    }
+    fade[p] = Math.max(0, Math.min(1, f));
+  }
+  return fade;
+}
+
+// ---------- Prayer times ----------
+
+$("fetch-api").addEventListener("click", async () => {
+  setStatus("prayer-status", "API'den alınıyor…");
+  try {
+    const response = await fetch(API_URL, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    addDays(parsePrayerJson(await response.json()), "API");
+  } catch (error) {
+    setStatus("prayer-status", `API'den alınamadı: ${error.message}`, "error");
+  }
+});
+
+$("prayer-file").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    $("prayer-json").value = await file.text();
+  }
+});
+
+$("prayer-add").addEventListener("click", () => {
+  const text = $("prayer-json").value.trim();
+  if (!text) {
+    setStatus("prayer-status", "Önce JSON yapıştırın ya da bir dosya seçin.", "error");
+    return;
+  }
+  let json;
+  try {
+    // Also accept a whole prayer-times.js ("var PRAYER_TIMES = {...};").
+    json = /^\s*(\/\/|var\s)/.test(text) ? parseAssigned(text) : JSON.parse(text);
+  } catch (error) {
+    setStatus("prayer-status", `JSON okunamadı: ${error.message}`, "error");
+    return;
+  }
+  addDays(parsePrayerJson(json), "JSON");
+});
+
+function addDays({ days, errors }, source) {
+  // Past days are never shown, so they are not added.
+  const dates = Object.keys(days).filter((date) => date >= berlinToday()).sort();
+  if (!dates.length) {
+    setStatus("prayer-status", ["Eklenecek geçerli gün bulunamadı.", ...errors.slice(0, 8)].join("\n"), "error");
+    return;
+  }
+  const current = mergedPrayerDays();
+  let added = 0;
+  let updated = 0;
+  for (const date of dates) {
+    if (!current[date]) {
+      added++;
+    } else if (PRAYER_KEYS.some((key) => current[date][key] !== days[date][key]) || current[date].hicri !== days[date].hicri) {
+      updated++;
+    }
+    state.pendingDays[date] = days[date];
+  }
+  const lines = [
+    `${source}: ${dates.length} gün okundu (${formatDate(dates[0])} – ${formatDate(dates.at(-1))}). ${added} yeni, ${updated} değişen gün.`,
+    "Yayınlamak için “Kaydet ve yayınla”."
+  ];
+  if (errors.length) {
+    lines.push(`${errors.length} kayıt atlandı:`, ...errors.slice(0, 8));
+  }
+  setStatus("prayer-status", lines.join("\n"), errors.length ? "error" : "ok");
+  if (source === "JSON") {
+    $("prayer-json").value = "";
+  }
+  changed();
+}
+
+// Accepts { date: day }, { days: { date: day } }, or a list of days that each
+// carry their date (also the Diyanet / ezanvakti API response as-is).
+function parsePrayerJson(json) {
+  const days = {};
+  const errors = [];
+  const entries = Array.isArray(json)
+    ? json.map((item, index) => [null, item, `#${index + 1}`])
+    : json && typeof json === "object"
+      ? Object.entries(json.days && typeof json.days === "object" ? json.days : json).map(([key, item]) => [key, item, key])
+      : [];
+
+  for (const [key, item, label] of entries) {
+    if (!item || typeof item !== "object") {
+      errors.push(`${label}: gün bilgisi değil`);
+      continue;
+    }
+    const fields = {};
+    for (const [name, value] of Object.entries(item)) {
+      fields[normalizeKey(name)] = value;
+    }
+    const date = (key && parseDate(key))
+      || parseDate(fields.date ?? fields.tarih ?? fields.miladitarihkisa ?? fields.miladitarih ?? fields.gun);
+    if (!date) {
+      errors.push(`${label}: tarih anlaşılamadı`);
+      continue;
+    }
+    const day = { hicri: String(fields.hicri ?? fields.hijri ?? fields.hicritarihuzun ?? fields.hicritarih ?? fields.hicritarihkisa ?? "").trim() };
+    const bad = [];
+    for (const prayer of PRAYER_KEYS) {
+      const time = parseTime(fields[prayer]);
+      if (time) {
+        day[prayer] = time;
+      } else {
+        bad.push(prayer);
+      }
+    }
+    if (bad.length) {
+      errors.push(`${formatDate(date)}: geçersiz ya da eksik saat (${bad.join(", ")})`);
+      continue;
+    }
+    days[date] = day;
+  }
+  return { days, errors };
+}
+
+function normalizeKey(name) {
+  return String(name)
+    .toLocaleLowerCase("tr")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function parseDate(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  let match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value.trim());
+  let year, month, day;
+  if (match) {
+    [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  } else if ((match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value.trim()))) {
+    [day, month, year] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  } else {
+    return null;
+  }
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function parseTime(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value ?? "").trim());
+  if (!match || Number(match[1]) > 23 || Number(match[2]) > 59) {
+    return null;
+  }
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+
+function mergedPrayerDays(base = state.prayer.days) {
+  const today = berlinToday();
+  const merged = {};
+  for (const date of Object.keys({ ...base, ...state.pendingDays }).sort()) {
+    if (date >= today) {
+      merged[date] = state.pendingDays[date] || base[date];
+    }
+  }
+  return merged;
+}
+
+function showPrayerSummary() {
+  const dates = Object.keys(mergedPrayerDays());
+  const today = berlinToday();
+  if (!dates.length) {
+    $("prayer-summary").textContent = "Dosyada bugünden sonrası için vakit yok.";
+    return;
+  }
+  const gaps = [];
+  if (dates[0] > today) {
+    gaps.push(`${formatDate(today)} – ${formatDate(addDay(dates[0], -1))}`);
+  }
+  for (let i = 1; i < dates.length; i++) {
+    if (dates[i] !== addDay(dates[i - 1], 1)) {
+      gaps.push(`${formatDate(addDay(dates[i - 1], 1))} – ${formatDate(addDay(dates[i], -1))}`);
+    }
+  }
+  const pending = Object.keys(state.pendingDays).length;
+  $("prayer-summary").textContent =
+    `${dates.length} gün var: ${formatDate(dates[0])} – ${formatDate(dates.at(-1))}.` +
+    (gaps.length ? ` Eksik: ${gaps.join(", ")}.` : " Eksik gün yok.") +
+    (pending ? ` (${pending} gün henüz yayınlanmadı.)` : "");
+}
+
+function prayerTimesFile(days) {
+  const lines = Object.entries(days).map(([date, day]) => `    ${JSON.stringify(date)}: ${JSON.stringify(day)}`);
+  return `// Prayer times for the display, written by scripts/fetch-prayer-times.mjs or admin.html.
+var PRAYER_TIMES = {
+  "city": ${JSON.stringify(state.prayer.city || "Castrop-Rauxel")},
+  "districtId": ${JSON.stringify(state.prayer.districtId || "10964")},
+  "generatedAt": ${JSON.stringify(new Date().toISOString())},
+  "days": {
+${lines.join(",\n")}
+  }
+};
+`;
+}
+
+function settingsFile(settings) {
+  return `// Display settings. Change them on admin.html (or by hand, keeping valid JSON).
+var DISPLAY_SETTINGS = ${JSON.stringify(settings, null, 2)};
+`;
+}
+
+// ---------- Preview ----------
+
+let previewTimer = null;
+
+function changed() {
+  showPrayerSummary();
+  showDirty();
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(updatePreview, 120);
+}
+
+function updatePreview() {
+  const win = $("preview").contentWindow;
+  if (!win || typeof win.applyDisplaySettings !== "function") {
+    return;
+  }
+  const url = renderBackground().toDataURL("image/jpeg", 0.85);
+  win.applyDisplaySettings(state.settings, url);
+  win.PRAYER_TIMES = { ...state.prayer, days: mergedPrayerDays() };
+  win.refreshPrayerDisplay();
+}
+
+$("preview").addEventListener("load", updatePreview);
+$("preview-time-apply").addEventListener("click", () => {
+  const win = $("preview").contentWindow;
+  if (win && win.setPrayerDisplayTime) {
+    win.setPrayerDisplayTime($("preview-time").value.trim());
+  }
+});
+$("preview-time-clear").addEventListener("click", () => {
+  const win = $("preview").contentWindow;
+  if (win && win.clearPrayerDisplayTime) {
+    win.clearPrayerDisplayTime();
+  }
+});
+
+function backgroundChanged() {
+  const look = (s) => JSON.stringify([s.backgroundColor, s.backgroundImage]);
+  return Boolean(state.newSourceBlob) || look(state.settings) !== look(state.saved);
+}
+
+function isDirty() {
+  return JSON.stringify(state.settings) !== JSON.stringify(state.saved)
+    || Object.keys(state.pendingDays).length > 0
+    || Boolean(state.newSourceBlob);
+}
+
+function showDirty() {
+  $("dirty-note").textContent = isDirty() ? "Kaydedilmemiş değişiklikler var ·" : "";
+  $("dirty-note").className = isDirty() ? "dirty" : "";
+}
+
+window.addEventListener("beforeunload", (event) => {
+  if (isDirty()) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
+
+// ---------- Saving ----------
+
+$("gh-remember").addEventListener("change", saveConnection);
+$("gh-token").addEventListener("change", saveConnection);
+$("gh-repo").addEventListener("change", saveConnection);
+$("gh-branch").addEventListener("change", saveConnection);
+
+function connection() {
+  return {
+    token: $("gh-token").value.trim(),
+    repo: $("gh-repo").value.trim().replace(/^https:\/\/github\.com\//, "").replace(/\/$/, ""),
+    branch: $("gh-branch").value.trim() || "main"
+  };
+}
+
+function saveConnection() {
+  const { token, repo, branch } = connection();
+  storageSet(localStorage, STORAGE.repo, repo);
+  storageSet(localStorage, STORAGE.branch, branch);
+  if ($("gh-remember").checked) {
+    storageSet(localStorage, STORAGE.token, token);
+    storageSet(sessionStorage, STORAGE.token, "");
+  } else {
+    storageSet(localStorage, STORAGE.token, "");
+    storageSet(sessionStorage, STORAGE.token, token);
+  }
+}
+
+// Files to write. With fresh = true the prayer times are merged into the
+// newest prayer-times.js from GitHub, so days saved meanwhile are kept.
+async function buildFiles(fresh) {
+  const files = [];
+  const settings = clone(state.settings);
+
+  if (settings.backgroundImage.enabled && backgroundChanged()) {
+    settings.version = String(Date.now());
+    files.push({ path: "background.jpg", content: await canvasToBlob(renderBackground(), 0.82) });
+    if (state.newSourceBlob) {
+      files.push({ path: "background-source.jpg", content: state.newSourceBlob });
+    }
+  }
+
+  files.push({ path: "settings.js", content: settingsFile(settings) });
+
+  if (Object.keys(state.pendingDays).length) {
+    let base = state.prayer.days;
+    if (fresh) {
+      const text = await readRepoFile("prayer-times.js");
+      if (text) {
+        base = parseAssigned(text).days || {};
+      }
+    }
+    files.push({ path: "prayer-times.js", content: prayerTimesFile(mergedPrayerDays(base)) });
+  }
+
+  return { files, settings };
+}
+
+$("publish").addEventListener("click", async () => {
+  const { token, repo, branch } = connection();
+  if (!token) {
+    setStatus("publish-status", "Yayınlamak için GitHub erişim anahtarı gerekli (aşağıdaki açıklamaya bakın). Anahtar olmadan “Dosyaları indir” kullanılabilir.", "error");
+    return;
+  }
+  saveConnection();
+  $("publish").disabled = true;
+  setStatus("publish-status", "Kaydediliyor…");
+  try {
+    const { files, settings } = await buildFiles(true);
+    const sha = await commitFiles({ token, repo, branch }, files, "Admin: update display settings and prayer times");
+    state.saved = clone(settings);
+    state.settings = clone(settings);
+    if (Object.keys(state.pendingDays).length) {
+      state.prayer.days = { ...state.prayer.days, ...state.pendingDays };
+      state.pendingDays = {};
+    }
+    state.newSourceBlob = null;
+    changed();
+    setStatus("publish-status", sha
+      ? `Yayınlandı (${files.map((f) => f.path).join(", ")}).\nEkran birkaç dakika içinde güncellenir. Kayıt: https://github.com/${repo}/commit/${sha}`
+      : "Değişiklik yoktu, bir şey kaydedilmedi.", "ok");
+  } catch (error) {
+    setStatus("publish-status", `Kaydedilemedi: ${error.message}`, "error");
+  } finally {
+    $("publish").disabled = false;
+  }
+});
+
+$("download").addEventListener("click", async () => {
+  const links = $("download-links");
+  links.textContent = "";
+  try {
+    const { files } = await buildFiles(false);
+    for (const file of files) {
+      const blob = file.content instanceof Blob ? file.content : new Blob([file.content], { type: "text/javascript" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = file.path;
+      link.textContent = file.path;
+      links.append(link);
+    }
+    setStatus("publish-status", "Dosyaları indirip depoda aynı adla değiştirin, sonra commit + push yapın.", "ok");
+  } catch (error) {
+    setStatus("publish-status", `Dosyalar hazırlanamadı: ${error.message}`, "error");
+  }
+});
+
+// One commit with all files, through the Git Data API.
+async function commitFiles({ token, repo, branch }, files, message) {
+  const gh = async (path, options = {}) => {
+    const response = await fetch(`https://api.github.com/repos/${repo}${path}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        ...(options.body ? { "Content-Type": "application/json" } : {})
+      }
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      const hint = response.status === 401 ? " (anahtar geçersiz ya da süresi dolmuş)"
+        : response.status === 403 || response.status === 404 ? " (anahtarın bu depoda Contents: Read and write izni var mı?)"
+        : response.status === 422 ? " (depo bu sırada değişmiş olabilir, tekrar deneyin)"
+        : "";
+      throw new Error(`GitHub ${response.status}: ${detail.message || response.statusText}${hint}`);
+    }
+    return response.json();
+  };
+
+  const ref = await gh(`/git/ref/heads/${encodeURIComponent(branch)}`);
+  const parent = await gh(`/git/commits/${ref.object.sha}`);
+  const tree = [];
+  for (const file of files) {
+    const blob = await gh("/git/blobs", {
+      method: "POST",
+      body: JSON.stringify({ content: await toBase64(file.content), encoding: "base64" })
+    });
+    tree.push({ path: file.path, mode: "100644", type: "blob", sha: blob.sha });
+  }
+  const newTree = await gh("/git/trees", { method: "POST", body: JSON.stringify({ base_tree: parent.tree.sha, tree }) });
+  if (newTree.sha === parent.tree.sha) {
+    return null;
+  }
+  const commit = await gh("/git/commits", {
+    method: "POST",
+    body: JSON.stringify({ message, tree: newTree.sha, parents: [ref.object.sha] })
+  });
+  await gh(`/git/refs/heads/${encodeURIComponent(branch)}`, { method: "PATCH", body: JSON.stringify({ sha: commit.sha }) });
+  return commit.sha;
+}
+
+// ---------- Loading ----------
+
+// With a token, read straight from GitHub (always the newest version);
+// otherwise from this site, which can lag a few minutes behind a save.
+async function readRepoFile(path, asBlob = false) {
+  const { token, repo, branch } = connection();
+  const response = token
+    ? await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github.raw" },
+      cache: "no-store"
+    })
+    : await fetch(`${path}?t=${Date.now()}`, { cache: "no-store" });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`${path}: HTTP ${response.status}`);
+  }
+  return asBlob ? response.blob() : response.text();
+}
+
+async function load() {
+  try {
+    const settingsText = await readRepoFile("settings.js");
+    if (settingsText) {
+      const loaded = parseAssigned(settingsText);
+      state.settings = { ...clone(DEFAULTS), ...loaded, backgroundImage: { ...DEFAULTS.backgroundImage, ...(loaded.backgroundImage || {}) } };
+    }
+  } catch (error) {
+    setStatus("publish-status", `Ayarlar okunamadı, varsayılanlar gösteriliyor: ${error.message}`, "error");
+  }
+  state.saved = clone(state.settings);
+  fillForm();
+
+  try {
+    const prayerText = await readRepoFile("prayer-times.js");
+    if (prayerText) {
+      state.prayer = parseAssigned(prayerText);
+    }
+  } catch (error) {
+    setStatus("prayer-status", `prayer-times.js okunamadı: ${error.message}`, "error");
+  }
+
+  try {
+    const source = await readRepoFile("background-source.jpg", true);
+    if (source) {
+      state.image = await blobToImage(source);
+    }
+  } catch (error) {
+    setStatus("image-status", `Kayıtlı arka plan resmi okunamadı: ${error.message}`, "error");
+  }
+
+  changed();
+}
+
+function loadConnection() {
+  $("gh-repo").value = storageGet(localStorage, STORAGE.repo) || "SalihTalha/pt_castrop";
+  $("gh-branch").value = storageGet(localStorage, STORAGE.branch) || "main";
+  const remembered = storageGet(localStorage, STORAGE.token);
+  $("gh-remember").checked = Boolean(remembered);
+  $("gh-token").value = remembered || storageGet(sessionStorage, STORAGE.token) || "";
+}
+
+// ---------- Helpers ----------
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function round2(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function parseAssigned(text) {
+  return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+}
+
+function hexToRgb(hex) {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  return match ? [1, 2, 3].map((i) => parseInt(match[i], 16)) : [0, 0, 0];
+}
+
+function berlinToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date());
+}
+
+function addDay(date, amount) {
+  const next = new Date(`${date}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + amount);
+  return next.toISOString().slice(0, 10);
+}
+
+function formatDate(date) {
+  const [year, month, day] = date.split("-");
+  return `${day}.${month}.${year}`;
+}
+
+function setStatus(id, text, kind = "") {
+  $(id).textContent = text;
+  $(id).className = `status ${kind}`;
+}
+
+function blobToImage(blob) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("biçim desteklenmiyor"));
+    image.src = URL.createObjectURL(blob);
+  });
+}
+
+function canvasToBlob(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("resim oluşturulamadı"))), "image/jpeg", quality);
+  });
+}
+
+async function toBase64(content) {
+  const bytes = content instanceof Blob
+    ? new Uint8Array(await content.arrayBuffer())
+    : new TextEncoder().encode(content);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(binary);
+}
+
+function storageGet(storage, key) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function storageSet(storage, key, value) {
+  try {
+    if (value) {
+      storage.setItem(key, value);
+    } else {
+      storage.removeItem(key);
+    }
+  } catch {
+    // Storage can be unavailable (private mode); the values then last only this visit.
+  }
+}
+
+loadConnection();
+load();
+</script>
+</body>
+</html>

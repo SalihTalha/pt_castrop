@@ -1,12 +1,13 @@
 // Prayer time screen for IGMG Castrop-Rauxel Merkez Camii.
 // Plain ES5 (no modules, fetch, Intl, let/const or arrow functions) so it runs
-// on old TV browsers. The times come from prayer-times.js (PRAYER_TIMES).
+// on old TV browsers. The times come from prayer-times.js (PRAYER_TIMES), the
+// colours, texts and background from settings.js (DISPLAY_SETTINGS).
 (function () {
   var WEATHER_URL =
     "https://api.open-meteo.com/v1/forecast?latitude=51.55&longitude=7.3167" +
     "&current=temperature_2m,weather_code&timezone=Europe%2FBerlin";
   var WEATHER_EVERY_MS = 30 * 60 * 1000;
-  var PRAYER_TIMES_EVERY_MS = 6 * 60 * 60 * 1000;
+  var DATA_EVERY_MS = 60 * 60 * 1000;
   var URGENT_MS = 5 * 60 * 1000;
 
   var PRAYERS = [
@@ -107,7 +108,7 @@
 
     setText("clock", pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()));
     setText("date", pad(date) + " " + MONTHS[month] + " " + year + " " + WEEKDAYS[now.getUTCDay()]);
-    setText("hijri", today ? today.hicri : "");
+    setText("hijri", (today && today.hicri) || "");
 
     for (i = 0; i < PRAYERS.length; i++) {
       setText("time-" + PRAYERS[i].key, today ? today[PRAYERS[i].key] : "--:--");
@@ -223,16 +224,115 @@
     return "Değişken";
   }
 
-  // Load prayer-times.js again now and then, so a newly published file reaches
-  // the TV without a page reload. If loading fails, the current data stays.
-  function refreshPrayerTimes() {
+  // Load settings.js and prayer-times.js again every hour, so changes saved on
+  // admin.html reach the TV without a page reload. If loading fails, the
+  // current data stays.
+  function refreshData() {
+    reloadScript("settings.js", function () {
+      applySettings(window.DISPLAY_SETTINGS);
+    });
+    reloadScript("prayer-times.js", render);
+  }
+
+  function reloadScript(name, done) {
     var script = document.createElement("script");
-    script.src = "prayer-times.js?v=" + new Date().getTime();
+    script.src = name + "?v=" + new Date().getTime();
     script.onload = script.onerror = function () {
       script.parentNode.removeChild(script);
-      render();
+      done();
     };
     document.body.appendChild(script);
+  }
+
+  function hexToRgb(hex) {
+    var match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
+    return match ? [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)] : null;
+  }
+
+  function mix(a, b, amount) {
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * amount),
+      Math.round(a[1] + (b[1] - a[1]) * amount),
+      Math.round(a[2] + (b[2] - a[2]) * amount)
+    ];
+  }
+
+  function hex(rgb) {
+    return "#" + (16777216 + rgb[0] * 65536 + rgb[1] * 256 + rgb[2]).toString(16).slice(1);
+  }
+
+  // Solid colour first for browsers without rgba(), then the see-through one.
+  function background(rgb, alpha) {
+    alpha = Math.max(0, Math.min(1, alpha));
+    return "background:" + hex(rgb) + ";background:rgba(" + rgb.join(",") + "," + alpha + ");";
+  }
+
+  function setCss(css) {
+    var style = byId("settings-style");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "settings-style";
+      document.getElementsByTagName("head")[0].appendChild(style);
+    }
+    if (style.styleSheet) {
+      style.styleSheet.cssText = css;
+    } else {
+      while (style.firstChild) {
+        style.removeChild(style.firstChild);
+      }
+      style.appendChild(document.createTextNode(css));
+    }
+  }
+
+  // Applies DISPLAY_SETTINGS. Missing values keep the defaults in style.css.
+  // backdropSrc lets admin.html preview a background before it is saved.
+  function applySettings(settings, backdropSrc) {
+    var s = settings || {};
+    var image = s.backgroundImage || {};
+    var white = [255, 255, 255];
+    var bg = hexToRgb(s.backgroundColor);
+    var panel = hexToRgb(s.panelColor);
+    var next = hexToRgb(s.nextColor);
+    var text = hexToRgb(s.textColor);
+    var highlight = hexToRgb(s.highlightColor);
+    var alpha = typeof s.panelOpacity === "number" ? s.panelOpacity : 0.7;
+    var backdrop = byId("backdrop");
+    var src;
+
+    if (bg && panel && next && text && highlight) {
+      setCss(
+        "html,body{background:" + hex(bg) + ";}" +
+        "body{color:" + hex(text) + ";}" +
+        ".panel{" + background(panel, alpha) + "border-color:" + hex(mix(panel, white, 0.65)) + ";}" +
+        ".label,#location,#weather-label{color:" + hex(mix(text, panel, 0.25)) + ";}" +
+        "#title-sub,#hijri,#countdown,.prayer.is-next .prayer-time{color:" + hex(highlight) + ";}" +
+        ".prayer.is-next{" + background(next, alpha + 0.12) + "border-color:" + hex(highlight) + ";}" +
+        ".prayer.is-urgent{" + background(mix(next, white, 0.15), alpha + 0.2) + "border-color:#ffffff;}" +
+        ".prayer.is-urgent .prayer-name,.prayer.is-urgent .prayer-time{color:" + hex(mix(highlight, white, 0.5)) + ";}" +
+        ".prayer.is-current{" + background(mix(panel, white, 0.72), alpha + 0.22) + "color:#111f22;}" +
+        "#countdown-panel{" + background(mix(panel, next, 0.5), alpha + 0.05) + "}"
+      );
+    }
+
+    if (s.mosqueName) {
+      setText("mosque-name", s.mosqueName);
+      document.title = s.mosqueName + " Namaz Vakitleri";
+    }
+    if (s.location) {
+      setText("location", s.location);
+    }
+
+    if (image.enabled === false) {
+      backdrop.style.display = "none";
+    } else {
+      // The version changes whenever admin.html saves a new background.jpg,
+      // so the TV loads the new image instead of a cached one.
+      src = backdropSrc || "background.jpg" + (s.version ? "?v=" + s.version : "");
+      if (backdrop.getAttribute("src") !== src) {
+        backdrop.setAttribute("src", src);
+      }
+      backdrop.style.display = "block";
+    }
   }
 
   // Everything is sized in em, so one base font size scales the 96em x 54em
@@ -262,7 +362,7 @@
       parseInt(match[5], 10),
       match[6] ? parseInt(match[6], 10) : 0
     );
-    testOffsetMs = Math.round((targetMs - new Date().getTime()) / 1000) * 1000;
+    testOffsetMs = targetMs - new Date().getTime();
     render();
   };
 
@@ -271,10 +371,15 @@
     render();
   };
 
+  // Used by the live preview on admin.html.
+  window.applyDisplaySettings = applySettings;
+  window.refreshPrayerDisplay = render;
+
+  applySettings(window.DISPLAY_SETTINGS);
   fitToScreen();
   window.onresize = fitToScreen;
   tick();
   refreshWeather();
   setInterval(refreshWeather, WEATHER_EVERY_MS);
-  setInterval(refreshPrayerTimes, PRAYER_TIMES_EVERY_MS);
+  setInterval(refreshData, DATA_EVERY_MS);
 })();
