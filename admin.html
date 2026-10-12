@@ -20,6 +20,10 @@
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  .login { max-width: 380px; margin: 48px auto; }
+  .login label { margin-top: 10px; }
 
   body {
     margin: 0;
@@ -178,14 +182,25 @@
 <body>
 <header>
   <h1>Namaz Vakitleri · Yönetim</h1>
-  <span><span id="dirty-note"></span> <a href="./" target="_blank" rel="noopener">Ekranı aç</a></span>
+  <span><span id="dirty-note"></span> <a href="./" target="_blank" rel="noopener">Ekranı aç</a>
+    <button type="button" id="logout" hidden>Çıkış</button></span>
 </header>
 
-<main>
+<section class="login" id="login">
+  <h2>Giriş</h2>
+  <form id="login-form">
+    <label>Kullanıcı adı <input type="text" id="login-user" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+    <label>Şifre <input type="password" id="login-pass" autocomplete="current-password" required></label>
+    <div class="row"><button type="submit" class="primary" id="login-submit">Giriş yap</button></div>
+    <p class="status" id="login-status"></p>
+  </form>
+</section>
+
+<main id="app" hidden>
   <div class="preview-column">
     <section>
       <h2>Önizleme</h2>
-      <div class="preview-frame"><iframe id="preview" src="index.html" title="Ekran önizlemesi"></iframe></div>
+      <div class="preview-frame"><iframe id="preview" title="Ekran önizlemesi"></iframe></div>
       <div class="row">
         <input type="text" id="preview-time" placeholder="Örn. 18:50 veya 2026-12-31 23:58" style="flex: 1; min-width: 200px">
         <button type="button" id="preview-time-apply">Bu zamanı göster</button>
@@ -1455,8 +1470,69 @@ function storageSet(storage, key, value) {
   }
 }
 
-loadConnection();
-load();
+// ---------- Login ----------
+
+// The page keeps only a salted PBKDF2 hash of "username:password", never the
+// password itself. This keeps visitors out of the editor, but the check runs
+// in the browser of a public page, so it is not real protection on its own:
+// saving still needs the GitHub token, which is never stored in the repo.
+// For new credentials, run this and paste the two values below:
+// node -e 'const c=require("crypto"),s=c.randomBytes(16).toString("hex");console.log(s,c.pbkdf2Sync("USER:PASS",Buffer.from(s,"hex"),600000,32,"sha256").toString("hex"))'
+const LOGIN = {
+  salt: "afbf09d92879340f1b03efde60478160",
+  hash: "528e07c11a763fb0594dbd59635f02b9ac675d2b4da5ac48ac8fe31454525298",
+  iterations: 600000
+};
+const AUTH_KEY = "prayerAdmin.auth";
+
+async function loginHash(user, password) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(`${user}:${password}`), "PBKDF2", false, ["deriveBits"]);
+  const salt = new Uint8Array(LOGIN.salt.match(/../g).map((byte) => parseInt(byte, 16)));
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations: LOGIN.iterations }, key, 256);
+  return [...new Uint8Array(bits)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+$("login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("login-submit").disabled = true;
+  setStatus("login-status", "Kontrol ediliyor…");
+  try {
+    const hash = await loginHash($("login-user").value.trim(), $("login-pass").value);
+    if (hash === LOGIN.hash) {
+      storageSet(sessionStorage, AUTH_KEY, hash);
+      $("login-pass").value = "";
+      startAdmin();
+    } else {
+      setStatus("login-status", "Kullanıcı adı veya şifre hatalı.", "error");
+      $("login-pass").select();
+    }
+  } catch (error) {
+    setStatus("login-status", `Giriş yapılamadı: ${error.message}`, "error");
+  } finally {
+    $("login-submit").disabled = false;
+  }
+});
+
+$("logout").addEventListener("click", () => {
+  storageSet(sessionStorage, AUTH_KEY, "");
+  location.reload();
+});
+
+function startAdmin() {
+  $("login").hidden = true;
+  $("app").hidden = false;
+  $("logout").hidden = false;
+  loadConnection();
+  load();
+  $("preview").src = "index.html";
+}
+
+// Signing in lasts until this browser tab is closed.
+if (storageGet(sessionStorage, AUTH_KEY) === LOGIN.hash) {
+  startAdmin();
+} else {
+  $("login-user").focus();
+}
 </script>
 </body>
 </html>
