@@ -586,7 +586,7 @@
         "body{color:" + hex(text) + ";}" +
         ".panel{" + background(panel, alpha) + "border-color:" + hex(mix(panel, white, 0.65)) + ";}" +
         ".label,#location,#weather-label,#hadith-source{color:" + hex(mix(text, panel, 0.25)) + ";}" +
-        "#title-sub,#hijri,#countdown,#hadith-title,.prayer.is-next .prayer-time{color:" + hex(highlight) + ";}" +
+        "#hijri,#countdown,#hadith-title,.prayer.is-next .prayer-time{color:" + hex(highlight) + ";}" +
         ".prayer.is-next{" + background(next, alpha + 0.12) + "border-color:" + hex(highlight) + ";}" +
         ".prayer.is-urgent{" + background(mix(next, white, 0.15), alpha + 0.2) + "border-color:#ffffff;}" +
         ".prayer.is-urgent .prayer-name,.prayer.is-urgent .prayer-time{color:" + hex(mix(highlight, white, 0.5)) + ";}" +

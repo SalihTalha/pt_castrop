@@ -103,19 +103,13 @@ body {
 #title {
   position: absolute;
   right: 1.2em;
-  top: 1.1em;
+  top: 2.1em;
   text-align: right;
   white-space: nowrap;
 }
 
 #title-main {
   font-size: 2.6em;
-  line-height: 1.15;
-}
-
-#title-sub {
-  color: #fff0a6;
-  font-size: 1.6em;
   line-height: 1.15;
 }
 
