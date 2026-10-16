@@ -1,6 +1,6 @@
 // Display settings. Change them on admin.html (or by hand, keeping valid JSON).
 var DISPLAY_SETTINGS = {
-  "version": "1",
+  "version": "1792170672223",
   "backgroundColor": "#04333a",
   "panelColor": "#0a6169",
   "nextColor": "#138680",
