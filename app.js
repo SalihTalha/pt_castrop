@@ -79,6 +79,7 @@
   var testOffsetMs = 0;
   var pinnedLanguage = null;
   var weatherNow = null;
+  var previewing = false;
 
   function byId(id) {
     return document.getElementById(id);
@@ -507,6 +508,10 @@
   // admin.html reach the TV without a page reload. If loading fails, the
   // current data stays.
   function refreshData() {
+    if (previewing) {
+      // admin.html's preview supplies its own (unsaved) settings.
+      return;
+    }
     reloadScript("settings.js", function () {
       applySettings(window.DISPLAY_SETTINGS);
     });
@@ -651,7 +656,10 @@
   };
 
   // Used by the live preview on admin.html.
-  window.applyDisplaySettings = applySettings;
+  window.applyDisplaySettings = function (newSettings, backdropSrc) {
+    previewing = true;
+    applySettings(newSettings, backdropSrc);
+  };
   window.refreshPrayerDisplay = render;
   window.setDisplayLanguage = function (lang) {
     pinnedLanguage = LOCALES[lang] ? lang : null;
