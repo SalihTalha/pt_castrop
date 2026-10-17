@@ -6,6 +6,11 @@ var DISPLAY_SETTINGS = {
   "nextColor": "#138680",
   "textColor": "#f6fbfb",
   "highlightColor": "#fff0a6",
+  "topBarColor": "#0a6169",
+  "topBarTextColor": "#f6fbfb",
+  "bottomBarColor": "#0f7475",
+  "bottomBarTextColor": "#f6fbfb",
+  "bottomBarNumberColor": "#fff0a6",
   "panelOpacity": 0.7,
   "backgroundImage": {
     "enabled": true,
@@ -21,6 +26,10 @@ var DISPLAY_SETTINGS = {
     "ar"
   ],
   "languageSeconds": 10,
+  "sabah": {
+    "enabled": true,
+    "minutes": 30
+  },
   "texts": {
     "tr": {
       "mosqueName": "IGMG Castrop-Rauxel Merkez Camii",
@@ -32,6 +41,7 @@ var DISPLAY_SETTINGS = {
       "ikindi": "İkindi",
       "aksam": "Akşam",
       "yatsi": "Yatsı",
+      "sabah": "Sabah namazı",
       "countdown": "{vakit} Vaktine Kalan Süre",
       "clock": "Saat",
       "weather": "Hava Durumu",
@@ -48,6 +58,7 @@ var DISPLAY_SETTINGS = {
       "ikindi": "Nachmittag",
       "aksam": "Abend",
       "yatsi": "Nacht",
+      "sabah": "Morgengebet",
       "countdown": "Verbleibende Zeit bis {vakit}",
       "clock": "Uhrzeit",
       "weather": "Wetter",
@@ -64,6 +75,7 @@ var DISPLAY_SETTINGS = {
       "ikindi": "العصر",
       "aksam": "المغرب",
       "yatsi": "العشاء",
+      "sabah": "صلاة الفجر",
       "countdown": "الوقت المتبقي حتى {vakit}",
       "clock": "الساعة",
       "weather": "الطقس",

@@ -170,6 +170,34 @@ body {
   font-size: 5.2em;
 }
 
+/* Sabah namazı line along the bottom of the İmsak card. The time (5.2em) and
+   this line (1.6em) with a 0.3em gap are centred together, and the name stays
+   level with the time. Margins are in each element's own em. */
+.prayer-sub {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin-top: 1.22em;
+  font-size: 1.6em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.has-sabah .prayer-sub {
+  display: block;
+}
+
+.has-sabah .prayer-name {
+  margin-top: -0.84em;
+}
+
+.has-sabah .prayer-time {
+  margin-top: -0.68em;
+}
+
 .prayer.is-next {
   border-color: #ffeea2;
   background: #138680;

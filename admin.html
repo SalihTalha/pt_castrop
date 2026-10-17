@@ -216,6 +216,10 @@
         <label class="inline"><input type="checkbox" id="preview-hide-panels"> Kutuları gizle (sadece arka plan)</label>
       </div>
       <p class="status" id="preview-status"></p>
+      <div class="row" id="preview-focus-row" hidden>
+        <span id="preview-focus"></span>
+        <button type="button" id="preview-follow-reset">Ekrandaki gibi göster</button>
+      </div>
       <div class="row">
         <input type="text" id="preview-time" placeholder="Örn. 18:50 veya 2026-12-31 23:58" style="flex: 1; min-width: 200px">
         <button type="button" id="preview-time-apply">Bu zamanı göster</button>
@@ -256,7 +260,18 @@
         <label>Kutular <input type="color" id="f-panelColor"></label>
         <label>Sıradaki vakit kutusu <input type="color" id="f-nextColor"></label>
         <label>Yazı <input type="color" id="f-textColor"></label>
-        <label>Vurgu (sıradaki saat, geri sayım) <input type="color" id="f-highlightColor"></label>
+        <label>Vurgu (sıradaki saat, hicri tarih, hadis başlığı) <input type="color" id="f-highlightColor"></label>
+      </div>
+      <h3>Üst bar</h3>
+      <div class="grid">
+        <label>Arka plan <input type="color" id="f-topBarColor"></label>
+        <label>Yazı <input type="color" id="f-topBarTextColor"></label>
+      </div>
+      <h3>Alt bar (geri sayım)</h3>
+      <div class="grid">
+        <label>Arka plan <input type="color" id="f-bottomBarColor"></label>
+        <label>Yazı <input type="color" id="f-bottomBarTextColor"></label>
+        <label>Geri sayım rakamları <input type="color" id="f-bottomBarNumberColor"></label>
       </div>
       <h3>Kutular</h3>
       <label><span class="label-line">Kutuların saydamlığı <output id="o-panelTransparency"></output></span>
@@ -309,6 +324,16 @@
       <p class="hint">Hadisler sırayla gösterilir; tüm ekranlar aynı anda aynı hadisi gösterir. Hadis, ekrandaki dil değiştikçe o dilde gösterilir; o dilde metin yoksa Türkçesi gösterilir. Örnek hadisleri yayınlamadan önce kontrol edin.</p>
       <div id="hadith-list"></div>
       <div class="row"><button type="button" id="hadith-add">Yeni hadis ekle</button></div>
+    </section>
+
+    <section>
+      <h2>Sabah namazı</h2>
+      <label class="inline"><input type="checkbox" id="f-sabahEnabled"> Sabah namazı vaktini İmsak kutusunda göster</label>
+      <div class="grid" style="margin-top: 10px">
+        <label>Güneşin doğuşundan kaç dakika önce <input type="number" id="f-sabahMinutes" min="0" max="180" step="1"></label>
+      </div>
+      <p class="status" id="sabah-example"></p>
+      <p class="hint">Her gün o günün güneş vaktinden hesaplanır. Yazısı “Diller ve yazılar” tablosundaki “Sabah namazı” satırından değiştirilebilir.</p>
     </section>
 
     <section>
@@ -383,6 +408,11 @@ const DEFAULTS = {
   "nextColor": "#138680",
   "textColor": "#f6fbfb",
   "highlightColor": "#fff0a6",
+  "topBarColor": "#0a6169",
+  "topBarTextColor": "#f6fbfb",
+  "bottomBarColor": "#0f7475",
+  "bottomBarTextColor": "#f6fbfb",
+  "bottomBarNumberColor": "#fff0a6",
   "panelOpacity": 0.7,
   "backgroundImage": {
     "enabled": true,
@@ -398,6 +428,10 @@ const DEFAULTS = {
     "ar"
   ],
   "languageSeconds": 10,
+  "sabah": {
+    "enabled": true,
+    "minutes": 30
+  },
   "texts": {
     "tr": {
       "mosqueName": "IGMG Castrop-Rauxel Merkez Camii",
@@ -409,6 +443,7 @@ const DEFAULTS = {
       "ikindi": "İkindi",
       "aksam": "Akşam",
       "yatsi": "Yatsı",
+      "sabah": "Sabah namazı",
       "countdown": "{vakit} Vaktine Kalan Süre",
       "clock": "Saat",
       "weather": "Hava Durumu",
@@ -425,6 +460,7 @@ const DEFAULTS = {
       "ikindi": "Nachmittag",
       "aksam": "Abend",
       "yatsi": "Nacht",
+      "sabah": "Morgengebet",
       "countdown": "Verbleibende Zeit bis {vakit}",
       "clock": "Uhrzeit",
       "weather": "Wetter",
@@ -441,6 +477,7 @@ const DEFAULTS = {
       "ikindi": "العصر",
       "aksam": "المغرب",
       "yatsi": "العشاء",
+      "sabah": "صلاة الفجر",
       "countdown": "الوقت المتبقي حتى {vakit}",
       "clock": "الساعة",
       "weather": "الطقس",
@@ -532,6 +569,7 @@ const LANGS = [["tr", "Türkçe"], ["de", "Almanca"], ["ar", "Arapça"]];
 const TEXT_FIELDS = [
   ["mosqueName", "Cami adı"], ["location", "Konum"], ["title", "Başlık"],
   ["imsak", "İmsak"], ["gunes", "Güneş"], ["ogle", "Öğle"], ["ikindi", "İkindi"], ["aksam", "Akşam"], ["yatsi", "Yatsı"],
+  ["sabah", "Sabah namazı"],
   ["countdown", "Geri sayım ({vakit} = vakit adı)"], ["clock", "Saat başlığı"], ["weather", "Hava durumu başlığı"],
   ["hadith", "Hadis başlığı"], ["noData", "Vakit bilgisi yoksa"]
 ];
@@ -549,6 +587,7 @@ const state = {
   pendingDays: {},               // added here, merged into the newest file on save
   image: null,                   // source photo used to build background.jpg
   newSourceBlob: null,           // a newly uploaded photo, saved as background-source.jpg
+  readFallbacks: new Set(),      // files read from the site because GitHub could not be read
   previewUrl: null
 };
 
@@ -568,6 +607,17 @@ const FIELDS = [
   { id: "nextColor", read: (s) => s.nextColor, write: (s, v) => { s.nextColor = v; } },
   { id: "textColor", read: (s) => s.textColor, write: (s, v) => { s.textColor = v; } },
   { id: "highlightColor", read: (s) => s.highlightColor, write: (s, v) => { s.highlightColor = v; } },
+  { id: "topBarColor", read: (s) => s.topBarColor, write: (s, v) => { s.topBarColor = v; } },
+  { id: "topBarTextColor", read: (s) => s.topBarTextColor, write: (s, v) => { s.topBarTextColor = v; } },
+  { id: "bottomBarColor", read: (s) => s.bottomBarColor, write: (s, v) => { s.bottomBarColor = v; } },
+  { id: "bottomBarTextColor", read: (s) => s.bottomBarTextColor, write: (s, v) => { s.bottomBarTextColor = v; } },
+  { id: "bottomBarNumberColor", read: (s) => s.bottomBarNumberColor, write: (s, v) => { s.bottomBarNumberColor = v; } },
+  { id: "sabahEnabled", read: (s) => s.sabah.enabled, write: (s, v) => { s.sabah.enabled = v; } },
+  {
+    id: "sabahMinutes",
+    read: (s) => s.sabah.minutes,
+    write: (s, v) => { s.sabah.minutes = Math.min(180, Math.max(0, Math.round(v) || 0)); }
+  },
   {
     id: "panelTransparency", show: percent,
     read: (s) => Math.round((1 - s.panelOpacity) * 100),
@@ -631,7 +681,8 @@ for (const field of FIELDS) {
 }
 
 $("reset-look").addEventListener("click", () => {
-  for (const key of ["backgroundColor", "panelColor", "nextColor", "textColor", "highlightColor", "panelOpacity"]) {
+  for (const key of ["backgroundColor", "panelColor", "nextColor", "textColor", "highlightColor", "panelOpacity",
+    "topBarColor", "topBarTextColor", "bottomBarColor", "bottomBarTextColor", "bottomBarNumberColor"]) {
     state.settings[key] = DEFAULTS[key];
   }
   fillForm();
@@ -652,7 +703,49 @@ for (const [lang] of LANGS) {
   });
 }
 
-$("preview-language").addEventListener("change", updatePreview);
+$("preview-language").addEventListener("change", () => {
+  showPreviewFocus();
+  updatePreview();
+});
+
+// The preview shows what is being edited: its language, and the hadith.
+let previewHadithIndex = null;
+
+function focusPreview(lang, hadithIndex) {
+  let update = false;
+  if (lang && $("preview-language").value !== lang) {
+    $("preview-language").value = lang;
+    update = true;
+  }
+  if (hadithIndex !== undefined && previewHadithIndex !== hadithIndex) {
+    previewHadithIndex = hadithIndex;
+    update = true;
+  }
+  if (update) {
+    showPreviewFocus();
+    updatePreview();
+  }
+}
+
+function showPreviewFocus() {
+  const parts = [];
+  const lang = LANGS.find(([code]) => code === $("preview-language").value);
+  if (lang) {
+    parts.push(lang[1]);
+  }
+  if (previewHadithIndex !== null) {
+    parts.push(`${previewHadithIndex + 1}. hadis`);
+  }
+  $("preview-focus-row").hidden = !parts.length;
+  $("preview-focus").textContent = parts.length ? `Önizlemede düzenlediğiniz gösteriliyor: ${parts.join(" · ")}.` : "";
+}
+
+$("preview-follow-reset").addEventListener("click", () => {
+  $("preview-language").value = "";
+  previewHadithIndex = null;
+  showPreviewFocus();
+  updatePreview();
+});
 
 function renderTextsTable() {
   const table = $("texts-table");
@@ -666,7 +759,9 @@ function renderTextsTable() {
       input.type = "text";
       input.dir = lang === "ar" ? "rtl" : "ltr";
       input.value = (state.settings.texts[lang] || {})[key] ?? "";
+      input.addEventListener("focus", () => focusPreview(lang));
       input.addEventListener("input", () => {
+        focusPreview(lang);
         state.settings.texts[lang] = state.settings.texts[lang] || {};
         state.settings.texts[lang][key] = input.value;
         changed();
@@ -717,6 +812,8 @@ function renderHadithList() {
     const buttons = element("span", "", "");
     const move = (to) => {
       items.splice(to, 0, items.splice(index, 1)[0]);
+      previewHadithIndex = to;
+      showPreviewFocus();
       renderHadithList();
       changed();
     };
@@ -727,6 +824,12 @@ function renderHadithList() {
         const hasText = LANGS.some(([lang]) => (item.text[lang] || "").trim());
         if (!hasText || confirm(`${index + 1}. hadis silinsin mi?`)) {
           items.splice(index, 1);
+          if (previewHadithIndex === index) {
+            previewHadithIndex = null;
+          } else if (previewHadithIndex !== null && previewHadithIndex > index) {
+            previewHadithIndex--;
+          }
+          showPreviewFocus();
           renderHadithList();
           changed();
         }
@@ -744,8 +847,10 @@ function renderHadithList() {
       source.type = "text";
       source.value = item.source[lang] || "";
       source.placeholder = "Kaynak";
-      text.addEventListener("input", () => { item.text[lang] = text.value; changed(); });
-      source.addEventListener("input", () => { item.source[lang] = source.value; changed(); });
+      text.addEventListener("focus", () => focusPreview(lang, index));
+      source.addEventListener("focus", () => focusPreview(lang, index));
+      text.addEventListener("input", () => { item.text[lang] = text.value; focusPreview(lang, index); changed(); });
+      source.addEventListener("input", () => { item.source[lang] = source.value; focusPreview(lang, index); changed(); });
       row.append(element("span", "lang-tag", name), text, source);
       box.append(row);
     }
@@ -1096,6 +1201,7 @@ let previewTimer = null;
 
 function changed() {
   showPrayerSummary();
+  showSabahExample();
   showDirty();
   clearTimeout(previewTimer);
   previewTimer = setTimeout(updatePreview, 120);
@@ -1122,6 +1228,9 @@ function updatePreview() {
   }
   try {
     win.setDisplayLanguage($("preview-language").value || null);
+    if (typeof win.setPreviewHadith === "function") {
+      win.setPreviewHadith(previewHadithIndex);
+    }
     win.applyDisplaySettings(state.settings, url);
     win.PRAYER_TIMES = { ...state.prayer, days: mergedPrayerDays() };
     win.refreshPrayerDisplay();
@@ -1208,6 +1317,20 @@ $("preview-time-clear").addEventListener("click", () => {
     win.clearPrayerDisplayTime();
   }
 });
+
+function showSabahExample() {
+  const sabah = state.settings.sabah;
+  const day = mergedPrayerDays()[berlinToday()];
+  $("sabah-example").textContent = !sabah.enabled ? "Kapalı: ekranda gösterilmez."
+    : day ? `Bugün: Güneş ${day.gunes} → ${state.settings.texts.tr.sabah || "Sabah namazı"} ${minusMinutes(day.gunes, sabah.minutes)}`
+    : "Bugün için vakit bilgisi yok.";
+}
+
+function minusMinutes(hhmm, minutes) {
+  const [hours, mins] = hhmm.split(":").map(Number);
+  const total = (((hours * 60 + mins - Math.round(minutes)) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 function backgroundChanged() {
   const look = (s) => JSON.stringify([s.backgroundColor, s.backgroundImage]);
@@ -1391,16 +1514,26 @@ async function commitFiles({ token, repo, branch }, files, message) {
 
 // ---------- Loading ----------
 
-// With a token, read straight from GitHub (always the newest version);
-// otherwise from this site, which can lag a few minutes behind a save.
+// With a token, read straight from GitHub (always the newest version).
+// Otherwise, or if that fails, read from this site, which can lag a few
+// minutes behind a save; never fall back to defaults, which a save would
+// then write over the real settings.
 async function readRepoFile(path, asBlob = false) {
   const { token, repo, branch } = connection();
-  const response = token
-    ? await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github.raw" },
-      cache: "no-store"
-    })
-    : await fetch(`${path}?t=${Date.now()}`, { cache: "no-store" });
+  if (token) {
+    try {
+      return await readResponse(path, asBlob, await fetch(
+        `https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github.raw" }, cache: "no-store" }
+      ));
+    } catch (error) {
+      state.readFallbacks.add(path);
+    }
+  }
+  return readResponse(path, asBlob, await fetch(`${path}?t=${Date.now()}`, { cache: "no-store" }));
+}
+
+async function readResponse(path, asBlob, response) {
   if (response.status === 404) {
     return null;
   }
@@ -1440,6 +1573,10 @@ async function load() {
     }
   } catch (error) {
     setStatus("image-status", `Kayıtlı arka plan resmi okunamadı: ${error.message}`, "error");
+  }
+
+  if (state.readFallbacks.size) {
+    setStatus("publish-status", `GitHub'dan okunamadı (erişim anahtarını kontrol edin); sitedeki kopya kullanılıyor: ${[...state.readFallbacks].join(", ")}`, "error");
   }
 
   changed();
@@ -1483,6 +1620,20 @@ function normalizeSettings(loaded) {
   if (!Array.isArray(s.languages) || !s.languages.length) {
     s.languages = clone(DEFAULTS.languages);
   }
+  // The bars got their own colours later; until set they keep the ones they had.
+  const barColors = {
+    topBarColor: s.panelColor,
+    topBarTextColor: s.textColor,
+    bottomBarColor: mixHex(s.panelColor, s.nextColor, 0.5),
+    bottomBarTextColor: s.textColor,
+    bottomBarNumberColor: s.highlightColor
+  };
+  for (const [key, value] of Object.entries(barColors)) {
+    if (!loaded[key]) {
+      s[key] = value;
+    }
+  }
+  s.sabah = { ...DEFAULTS.sabah, ...(loaded.sabah || {}) };
   s.hadiths = { ...clone(DEFAULTS.hadiths), ...(loaded.hadiths || {}) };
   if (!Array.isArray(s.hadiths.items)) {
     s.hadiths.items = clone(DEFAULTS.hadiths.items);
@@ -1501,6 +1652,13 @@ function round2(value) {
 
 function parseAssigned(text) {
   return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+}
+
+// Same rounding as app.js, so derived colours match the display.
+function mixHex(a, b, amount) {
+  const from = hexToRgb(a);
+  const to = hexToRgb(b);
+  return "#" + from.map((v, i) => Math.round(v + (to[i] - v) * amount).toString(16).padStart(2, "0")).join("");
 }
 
 function hexToRgb(hex) {

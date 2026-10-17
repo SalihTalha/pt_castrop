@@ -23,6 +23,7 @@
     ikindi: "İkindi",
     aksam: "Akşam",
     yatsi: "Yatsı",
+    sabah: "Sabah namazı",
     countdown: "{vakit} Vaktine Kalan Süre",
     clock: "Saat",
     weather: "Hava Durumu",
@@ -80,6 +81,7 @@
   var pinnedLanguage = null;
   var weatherNow = null;
   var previewing = false;
+  var pinnedHadith = null;
 
   function byId(id) {
     return document.getElementById(id);
@@ -152,6 +154,14 @@
     var date = new Date(Date.UTC(year, month, day));
     var key = date.getUTCFullYear() + "-" + pad(date.getUTCMonth() + 1) + "-" + pad(date.getUTCDate());
     return (data && data.days && data.days[key]) || null;
+  }
+
+  // "07:49" minus 30 minutes is "07:19".
+  function minusMinutes(hhmm, minutes) {
+    var parts = hhmm.split(":");
+    var total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) - Math.round(minutes);
+    total = ((total % 1440) + 1440) % 1440;
+    return pad(Math.floor(total / 60)) + ":" + pad(total % 60);
   }
 
   function formatDuration(ms) {
@@ -247,6 +257,19 @@
     return items.length ? items : null;
   }
 
+  // The hadith admin.html is editing, if it has text (only in its preview).
+  function previewHadith(items) {
+    var all = settings.hadiths.items;
+    var item = pinnedHadith !== null && all ? all[pinnedHadith] : null;
+    var i;
+    for (i = 0; i < items.length; i++) {
+      if (items[i] === item) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   // Which hadith to show. It depends only on the time, so all TVs agree.
   function hadithIndex(count, now, currentIndex, beforeImsak) {
     var change = settings.hadiths.change;
@@ -279,14 +302,12 @@
     return null;
   }
 
-  function renderHadith(lang, index) {
-    var items = hadithItems();
-    var item, textLang, text, source;
-    setClass("screen", items ? "" : "no-hadith");
-    if (!items) {
+  function renderHadith(lang, item) {
+    var textLang, text, source;
+    setClass("screen", item ? "" : "no-hadith");
+    if (!item) {
       return;
     }
-    item = items[index] || {};
     textLang = pickLanguage(item.text, lang);
     text = textLang ? item.text[textLang] : "";
     source = textLang && item.source && item.source[textLang] ? "— " + item.source[textLang] : "";
@@ -317,7 +338,7 @@
     var beforeImsak = false;
     var targetMs = 0;
     var items = hadithItems();
-    var prayerMs, tomorrow, isUrgent, className, i;
+    var prayerMs, tomorrow, isUrgent, className, showSabah, i;
 
     setText("clock", pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()));
     setFitText("mosque-name-text", bidi(lang, t.mosqueName));
@@ -358,7 +379,13 @@
       currentIndex = PRAYER_KEYS.length - 1;
     }
 
-    renderHadith(lang, items ? hadithIndex(items.length, now, today ? currentIndex : -1, beforeImsak) : 0);
+    renderHadith(lang, items ? previewHadith(items) || items[hadithIndex(items.length, now, today ? currentIndex : -1, beforeImsak)] : null);
+
+    // The congregational morning prayer, shown in the İmsak box.
+    showSabah = today && settings.sabah && settings.sabah.enabled;
+    if (showSabah) {
+      setFitText("sabah-text", bidi(lang, t.sabah + " " + minusMinutes(today.gunes, Number(settings.sabah.minutes) || 0)));
+    }
 
     if (!today) {
       setFitText("countdown-label-text", bidi(lang, t.noData));
@@ -372,6 +399,9 @@
 
       for (i = 0; i < PRAYER_KEYS.length; i++) {
         className = "panel prayer";
+        if (i === 0 && showSabah) {
+          className += " has-sabah";
+        }
         if (i === nextIndex) {
           className += isUrgent ? " is-next is-urgent" : " is-next";
         }
@@ -400,6 +430,7 @@
       name = byId("name-" + PRAYER_KEYS[i]);
       fitWidth(name, byId("time-" + PRAYER_KEYS[i]).offsetLeft - name.parentNode.offsetLeft - 0.8 * em);
     }
+    fitWidth(byId("sabah-text"), byId("sabah-line").offsetWidth - 1.6 * em);
     fitWidth(byId("countdown-label-text"), byId("countdown").offsetLeft - byId("countdown-label").offsetLeft - 1.5 * em);
     fitWidth(byId("mosque-name-text"), byId("brand").offsetWidth);
     fitWidth(byId("location-text"), byId("brand").offsetWidth);
@@ -579,6 +610,7 @@
     var next = hexToRgb(s.nextColor);
     var text = hexToRgb(s.textColor);
     var highlight = hexToRgb(s.highlightColor);
+    var topBar, topText, bottomBar, bottomText, bottomNumber;
     var alpha = typeof s.panelOpacity === "number" ? s.panelOpacity : 0.7;
     var backdrop = byId("backdrop");
     var src;
@@ -586,17 +618,25 @@
     settings = s;
 
     if (bg && panel && next && text && highlight) {
+      topBar = hexToRgb(s.topBarColor) || panel;
+      topText = hexToRgb(s.topBarTextColor) || text;
+      bottomBar = hexToRgb(s.bottomBarColor) || mix(panel, next, 0.5);
+      bottomText = hexToRgb(s.bottomBarTextColor) || text;
+      bottomNumber = hexToRgb(s.bottomBarNumberColor) || highlight;
       setCss(
         "html,body{background:" + hex(bg) + ";}" +
         "body{color:" + hex(text) + ";}" +
         ".panel{" + background(panel, alpha) + "border-color:" + hex(mix(panel, white, 0.65)) + ";}" +
         ".label,#location,#weather-label,#hadith-source{color:" + hex(mix(text, panel, 0.25)) + ";}" +
-        "#hijri,#countdown,#hadith-title,.prayer.is-next .prayer-time{color:" + hex(highlight) + ";}" +
+        "#hijri,#hadith-title,.prayer.is-next .prayer-time{color:" + hex(highlight) + ";}" +
         ".prayer.is-next{" + background(next, alpha + 0.12) + "border-color:" + hex(highlight) + ";}" +
         ".prayer.is-urgent{" + background(mix(next, white, 0.15), alpha + 0.2) + "border-color:#ffffff;}" +
         ".prayer.is-urgent .prayer-name,.prayer.is-urgent .prayer-time{color:" + hex(mix(highlight, white, 0.5)) + ";}" +
         ".prayer.is-current{" + background(mix(panel, white, 0.72), alpha + 0.22) + "color:#111f22;}" +
-        "#countdown-panel{" + background(mix(panel, next, 0.5), alpha + 0.05) + "}"
+        "#topbar{" + background(topBar, alpha) + "color:" + hex(topText) + ";}" +
+        "#topbar #location{color:" + hex(mix(topText, topBar, 0.25)) + ";}" +
+        "#countdown-panel{" + background(bottomBar, alpha + 0.05) + "color:" + hex(bottomText) + ";}" +
+        "#countdown{color:" + hex(bottomNumber) + ";}"
       );
     }
 
@@ -661,6 +701,10 @@
     applySettings(newSettings, backdropSrc);
   };
   window.refreshPrayerDisplay = render;
+  window.setPreviewHadith = function (index) {
+    pinnedHadith = typeof index === "number" ? index : null;
+    render();
+  };
   window.setDisplayLanguage = function (lang) {
     pinnedLanguage = LOCALES[lang] ? lang : null;
     render();
