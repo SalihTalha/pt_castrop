@@ -1,6 +1,6 @@
 // Display settings. Change them on admin.html (or by hand, keeping valid JSON).
 var DISPLAY_SETTINGS = {
-  "version": "1792170672223",
+  "version": "1792220901694",
   "backgroundColor": "#04333a",
   "panelColor": "#0a6169",
   "nextColor": "#138680",
@@ -15,8 +15,8 @@ var DISPLAY_SETTINGS = {
   "backgroundImage": {
     "enabled": true,
     "grayscale": true,
-    "opacity": 0.5,
-    "zoom": 1,
+    "opacity": 0.85,
+    "zoom": 1.47,
     "x": 50,
     "y": 50
   },
