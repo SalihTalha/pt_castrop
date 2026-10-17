@@ -60,8 +60,12 @@
     <span id="countdown">--:--:--</span>
   </div>
 </div>
-<script src="settings.js"></script>
-<script src="prayer-times.js"></script>
+<script id="data-loader">
+  // Always the newest settings and prayer times, never a cached copy, so a
+  // saved change shows as soon as the page is (re)loaded.
+  document.write('<script src="settings.js?v=' + new Date().getTime() + '"><\/script>');
+  document.write('<script src="prayer-times.js?v=' + new Date().getTime() + '"><\/script>');
+</script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -89,11 +89,11 @@
 
   // Returns true when the text changed.
   function setText(id, text) {
-    if (shown[id] === text) {
+    var element = byId(id);
+    if (!element || shown[id] === text) {
       return false;
     }
     shown[id] = text;
-    var element = byId(id);
     while (element.firstChild) {
       element.removeChild(element.firstChild);
     }
@@ -109,11 +109,12 @@
   }
 
   function setClass(id, className) {
-    if (shown["class:" + id] === className) {
+    var element = byId(id);
+    if (!element || shown["class:" + id] === className) {
       return;
     }
     shown["class:" + id] = className;
-    byId(id).className = className;
+    element.className = className;
   }
 
   function pad(value) {
@@ -430,7 +431,9 @@
       name = byId("name-" + PRAYER_KEYS[i]);
       fitWidth(name, byId("time-" + PRAYER_KEYS[i]).offsetLeft - name.parentNode.offsetLeft - 0.8 * em);
     }
-    fitWidth(byId("sabah-text"), byId("sabah-line").offsetWidth - 1.6 * em);
+    if (byId("sabah-line")) {
+      fitWidth(byId("sabah-text"), byId("sabah-line").offsetWidth - 1.6 * em);
+    }
     fitWidth(byId("countdown-label-text"), byId("countdown").offsetLeft - byId("countdown-label").offsetLeft - 1.5 * em);
     fitWidth(byId("mosque-name-text"), byId("brand").offsetWidth);
     fitWidth(byId("location-text"), byId("brand").offsetWidth);
@@ -445,6 +448,9 @@
   }
 
   function fitWidth(element, maxPx) {
+    if (!element) {
+      return;
+    }
     element.style.fontSize = "";
     element.style.verticalAlign = "";
     var width = element.offsetWidth;

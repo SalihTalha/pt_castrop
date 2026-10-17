@@ -83,6 +83,10 @@
   .preview-frame.large { position: fixed; inset: 0; z-index: 50; width: auto; aspect-ratio: auto; border-radius: 0; }
   .preview-close { position: absolute; top: 12px; right: 12px; z-index: 2; }
 
+  /* On narrow screens the preview scrolls away; this opens it over the page. */
+  .preview-fab { position: fixed; right: 16px; bottom: 16px; z-index: 40; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
+  @media (min-width: 901px) { .preview-fab { display: none; } }
+
   .bg-thumb { display: block; width: 100%; aspect-ratio: 16 / 9; margin-top: 12px; border-radius: 6px; background: #000; }
 
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
@@ -397,6 +401,7 @@
     </section>
   </div>
 </main>
+<button type="button" class="primary preview-fab" id="preview-fab" hidden>Önizleme</button>
 
 <script>
 "use strict";
@@ -668,14 +673,25 @@ function showFieldValue(field, value) {
   }
 }
 
+// Each control is handled on both "input" and "change": browsers differ in
+// which of the two they send for checkboxes, colour pickers and dropdowns.
+function onEdit(element, handler) {
+  element.addEventListener("input", handler);
+  element.addEventListener("change", handler);
+}
+
 for (const field of FIELDS) {
   const input = $(`f-${field.id}`);
-  input.addEventListener("input", () => {
+  onEdit(input, (event) => {
     const value = input.type === "checkbox" ? input.checked
       : input.type === "range" || input.type === "number" ? Number(input.value)
       : input.value;
     field.write(state.settings, value);
     showFieldValue(field, value);
+    if (event.type === "change" && input.type === "number") {
+      // Show the value actually used, e.g. 4030 minutes becomes 180.
+      input.value = field.read(state.settings);
+    }
     changed();
   });
 }
@@ -692,7 +708,7 @@ $("reset-look").addEventListener("click", () => {
 // ---------- Languages and texts ----------
 
 for (const [lang] of LANGS) {
-  $(`lang-${lang}`).addEventListener("input", () => {
+  onEdit($(`lang-${lang}`), () => {
     const chosen = LANGS.map(([code]) => code).filter((code) => $(`lang-${code}`).checked);
     if (!chosen.length) {
       $(`lang-${lang}`).checked = true;
@@ -774,16 +790,16 @@ function renderTextsTable() {
 
 // ---------- Hadiths ----------
 
-$("hadith-enabled").addEventListener("input", () => {
+onEdit($("hadith-enabled"), () => {
   state.settings.hadiths.enabled = $("hadith-enabled").checked;
   changed();
 });
-$("hadith-change").addEventListener("change", () => {
+onEdit($("hadith-change"), () => {
   state.settings.hadiths.change = $("hadith-change").value;
   showHadithMinutes();
   changed();
 });
-$("hadith-minutes").addEventListener("input", () => {
+onEdit($("hadith-minutes"), () => {
   state.settings.hadiths.minutes = Math.min(1440, Math.max(1, Math.round(Number($("hadith-minutes").value)) || 30));
   changed();
 });
@@ -906,48 +922,66 @@ $("image-file").addEventListener("change", async (event) => {
 
 // Draws the screen background exactly as the TV will show it: the photo
 // (grey if chosen) faded into the background colour, edges softened.
-function renderBackground() {
+// Saving draws it at full size on canvases of its own. The preview draws it
+// at the size it is shown and reuses its canvases: allocating new full-size
+// canvases on every change runs browsers (Safari above all) out of canvas
+// memory, after which nothing could be drawn any more.
+const previewCanvases = new Map();
+
+function renderBackground(width = SCREEN_W, reuse = false) {
+  const height = Math.round((width * SCREEN_H) / SCREEN_W);
+  const k = width / SCREEN_W;
+  let pair = reuse ? previewCanvases.get(width) : null;
+  if (!pair) {
+    pair = { canvas: document.createElement("canvas"), layer: document.createElement("canvas") };
+    for (const c of [pair.canvas, pair.layer]) {
+      c.width = width;
+      c.height = height;
+    }
+    if (reuse) {
+      previewCanvases.clear();
+      previewCanvases.set(width, pair);
+    }
+  }
   const s = state.settings;
   const options = s.backgroundImage;
-  const canvas = document.createElement("canvas");
-  canvas.width = SCREEN_W;
-  canvas.height = SCREEN_H;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const ctx = pair.canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    throw new Error("tarayıcı resmi çizemedi");
+  }
   ctx.fillStyle = s.backgroundColor;
-  ctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+  ctx.fillRect(0, 0, width, height);
 
   const image = state.image;
   if (!image || !options.enabled) {
-    return canvas;
+    return pair.canvas;
   }
 
-  const scale = (SCREEN_H / image.naturalHeight) * options.zoom;
-  const width = image.naturalWidth * scale;
-  const height = image.naturalHeight * scale;
-  const left = ((SCREEN_W - width) * options.x) / 100;
-  const top = ((SCREEN_H - height) * options.y) / 100;
+  const scale = (height / image.naturalHeight) * options.zoom;
+  const photoWidth = image.naturalWidth * scale;
+  const photoHeight = image.naturalHeight * scale;
+  const left = ((width - photoWidth) * options.x) / 100;
+  const top = ((height - photoHeight) * options.y) / 100;
 
-  const layer = document.createElement("canvas");
-  layer.width = SCREEN_W;
-  layer.height = SCREEN_H;
-  const layerCtx = layer.getContext("2d", { willReadFrequently: true });
-  layerCtx.drawImage(image, left, top, width, height);
+  const layerCtx = pair.layer.getContext("2d", { willReadFrequently: true });
+  layerCtx.clearRect(0, 0, width, height);
+  layerCtx.drawImage(image, left, top, photoWidth, photoHeight);
 
-  const photo = layerCtx.getImageData(0, 0, SCREEN_W, SCREEN_H).data;
-  const output = ctx.getImageData(0, 0, SCREEN_W, SCREEN_H);
+  const photo = layerCtx.getImageData(0, 0, width, height).data;
+  const output = ctx.getImageData(0, 0, width, height);
   const pixels = output.data;
   const [bgR, bgG, bgB] = hexToRgb(s.backgroundColor);
 
   // Soften only the photo edges that fall inside the screen.
-  const fadeX = edgeFade(SCREEN_W, left, width);
-  const fadeY = edgeFade(SCREEN_H, top, height);
+  const fadeX = edgeFade(width, left, photoWidth, IMAGE_FADE_PX * k);
+  const fadeY = edgeFade(height, top, photoHeight, IMAGE_FADE_PX * k);
 
-  for (let y = 0; y < SCREEN_H; y++) {
+  for (let y = 0; y < height; y++) {
     if (!fadeY[y]) {
       continue;
     }
-    for (let x = 0; x < SCREEN_W; x++) {
-      const i = (y * SCREEN_W + x) * 4;
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
       const alpha = options.opacity * fadeX[x] * fadeY[y] * (photo[i + 3] / 255);
       if (alpha <= 0) {
         continue;
@@ -965,10 +999,10 @@ function renderBackground() {
   }
 
   ctx.putImageData(output, 0, 0);
-  return canvas;
+  return pair.canvas;
 }
 
-function edgeFade(size, start, length) {
+function edgeFade(size, start, length, fadePx) {
   const fade = new Float32Array(size);
   const end = start + length;
   for (let p = 0; p < size; p++) {
@@ -978,10 +1012,10 @@ function edgeFade(size, start, length) {
     }
     let f = 1;
     if (start > 0) {
-      f = Math.min(f, (centre - start) / IMAGE_FADE_PX);
+      f = Math.min(f, (centre - start) / fadePx);
     }
     if (end < size) {
-      f = Math.min(f, (end - centre) / IMAGE_FADE_PX);
+      f = Math.min(f, (end - centre) / fadePx);
     }
     fade[p] = Math.max(0, Math.min(1, f));
   }
@@ -1049,6 +1083,12 @@ function addDays({ days, errors }, source) {
     `${source}: ${dates.length} gün okundu (${formatDate(dates[0])} – ${formatDate(dates.at(-1))}). ${added} yeni, ${updated} değişen gün.`,
     "Yayınlamak için “Kaydet ve yayınla”."
   ];
+  if (dates[0] > berlinToday()) {
+    // Show the new days in the preview, from their first day.
+    previewTime = `${dates[0]} 12:00`;
+    $("preview-time").value = previewTime;
+    lines.push(`Önizleme ${formatDate(dates[0])} tarihini gösteriyor (“Şimdiki zaman” ile geri dönülür).`);
+  }
   if (errors.length) {
     lines.push(`${errors.length} kayıt atlandı:`, ...errors.slice(0, 8));
   }
@@ -1196,8 +1236,17 @@ var DISPLAY_SETTINGS = ${JSON.stringify(settings, null, 2)};
 }
 
 // ---------- Preview ----------
+//
+// The preview runs the display's own files, fetched fresh (never from the
+// browser cache, which can hold an old version for up to 10 minutes) and put
+// into the frame with the unsaved settings and prayer times already in place.
+// After that each change is applied straight to the running display.
 
+const SITE_BASE = new URL(".", location.href).href;
+const PREVIEW_TIME = /^(?:\d{4}-\d{2}-\d{2} )?\d{1,2}:\d{2}(?::\d{2})?$/;
+let previewCode = null;
 let previewTimer = null;
+let previewTime = "";
 
 function changed() {
   showPrayerSummary();
@@ -1207,39 +1256,108 @@ function changed() {
   previewTimer = setTimeout(updatePreview, 120);
 }
 
+async function loadPreview() {
+  setStatus("preview-status", "Önizleme hazırlanıyor…");
+  try {
+    const read = async (path) => {
+      const response = await fetch(`${path}?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`${path}: HTTP ${response.status}`);
+      }
+      return response.text();
+    };
+    const [html, css, js] = await Promise.all(["index.html", "style.css", "app.js"].map(read));
+    previewCode = { html, css, js };
+    $("preview").srcdoc = previewDocument();
+  } catch (error) {
+    // Show the display page itself rather than nothing.
+    previewCode = null;
+    $("preview").removeAttribute("srcdoc");
+    $("preview").src = `index.html?preview=${Date.now()}`;
+    setStatus("preview-status", `Önizleme ekran sayfasından açıldı (${error.message}).`, "error");
+  }
+}
+
+// index.html with style.css and app.js inlined, and the data loader replaced
+// by the admin's current settings and prayer times.
+function previewDocument() {
+  const doc = new DOMParser().parseFromString(previewCode.html, "text/html");
+  const link = doc.querySelector('link[rel="stylesheet"]');
+  const loader = doc.getElementById("data-loader");
+  const app = doc.querySelector('script[src="app.js"]');
+  if (!link || !loader || !app) {
+    throw new Error("ekran dosyası beklenen biçimde değil");
+  }
+  const json = (value) => JSON.stringify(value).replace(/</g, "\\u003c");
+  const inline = (tag, text) => {
+    const node = doc.createElement(tag);
+    node.textContent = text;
+    return node;
+  };
+  const base = doc.createElement("base");
+  base.href = SITE_BASE;
+  doc.head.prepend(base);
+  link.replaceWith(inline("style", previewCode.css));
+  loader.replaceWith(inline("script",
+    `var DISPLAY_SETTINGS = ${json(state.settings)};\nvar PRAYER_TIMES = ${json({ ...state.prayer, days: mergedPrayerDays() })};`));
+  app.replaceWith(inline("script", previewCode.js));
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+}
+
+// The background is drawn at the size the preview shows it.
+function previewWidth() {
+  const pixels = $("preview-frame").clientWidth * (window.devicePixelRatio || 1);
+  return Math.max(480, Math.min(SCREEN_W, Math.ceil(pixels / 160) * 160));
+}
+
 function updatePreview() {
+  const problems = [];
   let url;
   try {
-    url = renderBackground().toDataURL("image/jpeg", 0.85);
+    url = renderBackground(previewWidth(), true).toDataURL("image/jpeg", 0.85);
+    $("bg-thumb").src = url;
   } catch (error) {
-    setStatus("preview-status", `Arka plan hazırlanamadı: ${error.message}`, "error");
-    return;
+    problems.push(`arka plan çizilemedi: ${error.message}`);
   }
-  $("bg-thumb").src = url;
 
-  const win = $("preview").contentWindow;
-  const ready = win && typeof win.applyDisplaySettings === "function" && typeof win.setDisplayLanguage === "function";
-  if (!ready) {
-    // Still loading (its load event calls this again), or an old cached copy.
-    if (win && /index\.html$/.test(win.location.pathname) && win.document.readyState === "complete") {
-      setStatus("preview-status", "Önizleme eski bir sürümle açıldı. “Önizlemeyi yenile”ye basın; düzelmezse sayfayı Ctrl+Shift+R ile yenileyin.", "error");
-    }
+  const win = previewWindow();
+  if (!win) {
+    // Still loading (its load event calls this again), or showing an error page.
     return;
   }
+  // Everything else is applied even if the background failed.
   try {
-    win.setDisplayLanguage($("preview-language").value || null);
-    if (typeof win.setPreviewHadith === "function") {
-      win.setPreviewHadith(previewHadithIndex);
-    }
-    win.applyDisplaySettings(state.settings, url);
+    win.setDisplayLanguage?.($("preview-language").value || null);
+    win.setPreviewHadith?.(previewHadithIndex);
     win.PRAYER_TIMES = { ...state.prayer, days: mergedPrayerDays() };
-    win.refreshPrayerDisplay();
+    win.applyDisplaySettings(clone(state.settings), url);
+    if (previewTime) {
+      win.setPrayerDisplayTime?.(previewTime);
+    } else {
+      win.clearPrayerDisplayTime?.();
+    }
     hidePanelsInPreview(win, $("preview-hide-panels").checked);
-    setStatus("preview-status", isDirty()
-      ? "Önizleme kaydedilmemiş değişikliklerinizi gösteriyor."
-      : "Önizleme yayındaki ayarları gösteriyor.");
   } catch (error) {
-    setStatus("preview-status", `Önizleme güncellenemedi: ${error.message}. “Önizlemeyi yenile”ye basın.`, "error");
+    problems.push(`ekrana uygulanamadı: ${error.message}`);
+  }
+
+  if (problems.length) {
+    setStatus("preview-status", `Önizleme güncellenemedi (${problems.join("; ")}). “Önizlemeyi yenile”ye basın.`, "error");
+  } else {
+    const time = new Date().toLocaleTimeString("tr-TR");
+    setStatus("preview-status", `Önizleme güncellendi (${time}): ${isDirty() ? "kaydedilmemiş değişiklikleriniz" : "yayındaki ayarlar"} gösteriliyor.`, "ok");
+  }
+}
+
+// The display running in the preview, or null while it loads. A browser error
+// page in the frame (e.g. when offline) is another origin and throws on access.
+function previewWindow() {
+  try {
+    const win = $("preview").contentWindow;
+    return win && typeof win.applyDisplaySettings === "function" ? win : null;
+  } catch {
+    setStatus("preview-status", "Önizleme açılamadı (bağlantı sorunu olabilir). “Önizlemeyi yenile”ye basın.", "error");
+    return null;
   }
 }
 
@@ -1253,11 +1371,6 @@ function hidePanelsInPreview(win, hide) {
   style.textContent = hide ? ".panel { visibility: hidden; }" : "";
 }
 
-function loadPreview() {
-  // A fresh copy of the display, then the load event applies the current settings.
-  $("preview").src = `index.html?preview=${Date.now()}`;
-}
-
 function setLargePreview(on) {
   $("preview-frame").classList.toggle("large", on);
   $("preview-close").hidden = !on;
@@ -1265,6 +1378,8 @@ function setLargePreview(on) {
   if (on) {
     $("preview-close").focus();
   }
+  // Redraw the background for the new size.
+  updatePreview();
 }
 
 // Esc closes the large preview, whether the admin page or the preview has focus.
@@ -1275,14 +1390,15 @@ function closeLargeOnEscape(event) {
 }
 
 $("preview").addEventListener("load", () => {
-  $("preview").contentWindow.document.addEventListener("keydown", closeLargeOnEscape);
+  const win = previewWindow();
+  if (win) {
+    win.document.addEventListener("keydown", closeLargeOnEscape);
+  }
   updatePreview();
 });
-$("preview-refresh").addEventListener("click", () => {
-  setStatus("preview-status", "Önizleme yeniden yükleniyor…");
-  loadPreview();
-});
+$("preview-refresh").addEventListener("click", loadPreview);
 $("preview-large").addEventListener("click", () => setLargePreview(true));
+$("preview-fab").addEventListener("click", () => setLargePreview(true));
 $("preview-close").addEventListener("click", () => setLargePreview(false));
 document.addEventListener("keydown", closeLargeOnEscape);
 $("preview-hide-panels").addEventListener("change", updatePreview);
@@ -1305,17 +1421,20 @@ function setImageFit(cover) {
 
 $("image-cover").addEventListener("click", () => setImageFit(true));
 $("image-contain").addEventListener("click", () => setImageFit(false));
+
 $("preview-time-apply").addEventListener("click", () => {
-  const win = $("preview").contentWindow;
-  if (win && win.setPrayerDisplayTime) {
-    win.setPrayerDisplayTime($("preview-time").value.trim());
+  const value = $("preview-time").value.trim();
+  if (value && !PREVIEW_TIME.test(value)) {
+    setStatus("preview-status", "Zamanı 18:50 ya da 2026-12-31 23:58 biçiminde yazın.", "error");
+    return;
   }
+  previewTime = value;
+  updatePreview();
 });
 $("preview-time-clear").addEventListener("click", () => {
-  const win = $("preview").contentWindow;
-  if (win && win.clearPrayerDisplayTime) {
-    win.clearPrayerDisplayTime();
-  }
+  previewTime = "";
+  $("preview-time").value = "";
+  updatePreview();
 });
 
 function showSabahExample() {
@@ -1438,9 +1557,22 @@ $("publish").addEventListener("click", async () => {
     state.newSourceBlob = null;
     fillForm();
     changed();
-    setStatus("publish-status", sha
-      ? `Yayınlandı (${files.map((f) => f.path).join(", ")}).\nEkran birkaç dakika içinde güncellenir. Kayıt: https://github.com/${repo}/commit/${sha}`
-      : "Değişiklik yoktu, bir şey kaydedilmedi.", "ok");
+    if (!sha) {
+      setStatus("publish-status", "Değişiklik yoktu, bir şey kaydedilmedi.", "ok");
+      return;
+    }
+    const saved = `Kaydedildi (${files.map((f) => f.path).join(", ")}). Kayıt: https://github.com/${repo}/commit/${sha}`;
+    setStatus("publish-status", `${saved}\nGitHub Pages yayınlıyor, genelde 1–2 dakika sürer…`, "ok");
+    // In the background, so editing and saving can go on; a newer save takes over.
+    const run = ++publishRun;
+    waitUntilLive(files.find((f) => f.path === "settings.js").content).then((live) => {
+      if (run !== publishRun) {
+        return;
+      }
+      setStatus("publish-status", live
+        ? `${saved}\nYayında. Açık bir ekranı yenilerseniz yeni hâli görünür; TV'ler en geç 1 saat içinde kendiliğinden alır.`
+        : `${saved}\nYayın 5 dakikada görünmedi. Birkaç dakika sonra ekranı yenileyip kontrol edin.`, live ? "ok" : "error");
+    });
   } catch (error) {
     setStatus("publish-status", `Kaydedilemedi: ${error.message}`, "error");
   } finally {
@@ -1466,6 +1598,25 @@ $("download").addEventListener("click", async () => {
     setStatus("publish-status", `Dosyalar hazırlanamadı: ${error.message}`, "error");
   }
 });
+
+let publishRun = 0;
+
+// Checks the live site every 10 seconds (up to 5 minutes) until it serves
+// the settings file that was just saved.
+async function waitUntilLive(settingsText) {
+  for (let i = 0; i < 30; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 10000));
+    try {
+      const response = await fetch(`settings.js?t=${Date.now()}`, { cache: "no-store" });
+      if (response.ok && (await response.text()) === settingsText) {
+        return true;
+      }
+    } catch {
+      // Try again on the next round.
+    }
+  }
+  return false;
+}
 
 // One commit with all files, through the Git Data API.
 async function commitFiles({ token, repo, branch }, files, message) {
@@ -1784,6 +1935,7 @@ function startAdmin() {
   $("login").hidden = true;
   $("app").hidden = false;
   $("logout").hidden = false;
+  $("preview-fab").hidden = false;
   loadConnection();
   load();
   loadPreview();
