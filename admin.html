@@ -87,6 +87,9 @@
   .preview-fab { position: fixed; right: 16px; bottom: 16px; z-index: 40; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
   @media (min-width: 901px) { .preview-fab { display: none; } }
 
+  .logo-thumb { display: block; max-width: 100%; max-height: 110px; margin-top: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .logo-thumb.plain { background: #0a6169; }
+
   .bg-thumb { display: block; width: 100%; aspect-ratio: 16 / 9; margin-top: 12px; border-radius: 6px; background: #000; }
 
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
@@ -285,6 +288,19 @@
     </section>
 
     <section>
+      <h2>İkinci logo</h2>
+      <p class="hint" style="margin-top: 0">Bir logo yüklenirse üst barın sağında, “Namaz Vakitleri” yazısının yerinde gösterilir. Logo yokken ya da kapalıyken ekran olduğu gibi kalır.</p>
+      <div class="row">
+        <label style="flex: 1">Logo yükle <input type="file" id="logo2-file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
+      </div>
+      <img class="logo-thumb" id="logo2-thumb" alt="İkinci logo" hidden>
+      <label class="inline" style="margin-top: 10px"><input type="checkbox" id="f-logo2Enabled"> İkinci logoyu göster</label>
+      <label class="inline" style="margin-top: 6px"><input type="checkbox" id="f-logo2White"> Beyaz kutu içinde göster (soldaki logo gibi)</label>
+      <p class="hint">Saydam arka planlı bir logo için beyaz kutuyu kapatabilirsiniz. Logo, soldaki logo yüksekliğinde gösterilir.</p>
+      <p class="status" id="logo2-status"></p>
+    </section>
+
+    <section>
       <h2>Arka plan resmi</h2>
       <label class="inline"><input type="checkbox" id="f-imageEnabled"> Arka plan resmini göster</label>
       <div class="row">
@@ -419,6 +435,13 @@ const DEFAULTS = {
   "bottomBarTextColor": "#f6fbfb",
   "bottomBarNumberColor": "#fff0a6",
   "panelOpacity": 0.7,
+  "secondLogo": {
+    "enabled": false,
+    "white": true,
+    "version": "",
+    "width": 0,
+    "height": 0
+  },
   "backgroundImage": {
     "enabled": true,
     "grayscale": true,
@@ -593,6 +616,8 @@ const state = {
   image: null,                   // source photo used to build background.jpg
   newSourceBlob: null,           // a newly uploaded photo, saved as background-source.jpg
   readFallbacks: new Set(),      // files read from the site because GitHub could not be read
+  logo2Blob: null,               // a newly uploaded second logo, saved as logo2.png
+  logo2Url: null,                // that logo for the preview, until it is saved
   previewUrl: null
 };
 
@@ -628,6 +653,8 @@ const FIELDS = [
     read: (s) => Math.round((1 - s.panelOpacity) * 100),
     write: (s, v) => { s.panelOpacity = round2(1 - v / 100); }
   },
+  { id: "logo2Enabled", read: (s) => s.secondLogo.enabled, write: (s, v) => { s.secondLogo.enabled = v; } },
+  { id: "logo2White", read: (s) => s.secondLogo.white !== false, write: (s, v) => { s.secondLogo.white = v; } },
   { id: "imageEnabled", read: (s) => s.backgroundImage.enabled, write: (s, v) => { s.backgroundImage.enabled = v; } },
   { id: "imageGray", read: (s) => s.backgroundImage.grayscale, write: (s, v) => { s.backgroundImage.grayscale = v; } },
   {
@@ -664,6 +691,7 @@ function fillForm() {
   showHadithMinutes();
   renderTextsTable();
   renderHadithList();
+  showLogo2Thumb();
 }
 
 function showFieldValue(field, value) {
@@ -894,6 +922,47 @@ function element(tag, className, text) {
 }
 
 // ---------- Background image ----------
+
+// The second logo is stored as a PNG (keeps transparency), at most 240px
+// high and 1200px wide; the screen shows it 4em high.
+$("logo2-file").addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+  try {
+    const original = await blobToImage(file);
+    if (!original.naturalWidth || !original.naturalHeight) {
+      throw new Error("resmin boyutu okunamadı");
+    }
+    const scale = Math.min(1, 240 / original.naturalHeight, 1200 / original.naturalWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(original.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(original.naturalHeight * scale));
+    canvas.getContext("2d").drawImage(original, 0, 0, canvas.width, canvas.height);
+    state.logo2Blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("resim oluşturulamadı"))), "image/png");
+    });
+    state.logo2Url = canvas.toDataURL("image/png");
+    Object.assign(state.settings.secondLogo, { enabled: true, width: canvas.width, height: canvas.height });
+    fillForm();
+    showLogo2Thumb();
+    setStatus("logo2-status", "Yeni logo seçildi. Yayınlamak için “Kaydet ve yayınla”.", "ok");
+    changed();
+  } catch (error) {
+    setStatus("logo2-status", `Logo açılamadı: ${error.message}. PNG ya da JPEG deneyin.`, "error");
+  }
+});
+
+function showLogo2Thumb() {
+  const logo = state.settings.secondLogo;
+  const src = state.logo2Url || (logo.version ? `logo2.png?v=${logo.version}` : "");
+  $("logo2-thumb").hidden = !src;
+  $("logo2-thumb").classList.toggle("plain", logo.white === false);
+  if (src && $("logo2-thumb").getAttribute("src") !== src) {
+    $("logo2-thumb").src = src;
+  }
+}
 
 $("image-file").addEventListener("change", async (event) => {
   const file = event.target.files[0];
@@ -1251,6 +1320,7 @@ let previewTime = "";
 function changed() {
   showPrayerSummary();
   showSabahExample();
+  showLogo2Thumb();
   showDirty();
   clearTimeout(previewTimer);
   previewTimer = setTimeout(updatePreview, 120);
@@ -1330,7 +1400,7 @@ function updatePreview() {
     win.setDisplayLanguage?.($("preview-language").value || null);
     win.setPreviewHadith?.(previewHadithIndex);
     win.PRAYER_TIMES = { ...state.prayer, days: mergedPrayerDays() };
-    win.applyDisplaySettings(clone(state.settings), url);
+    win.applyDisplaySettings(clone(state.settings), url, state.logo2Url || undefined);
     if (previewTime) {
       win.setPrayerDisplayTime?.(previewTime);
     } else {
@@ -1459,7 +1529,8 @@ function backgroundChanged() {
 function isDirty() {
   return JSON.stringify(state.settings) !== JSON.stringify(state.saved)
     || Object.keys(state.pendingDays).length > 0
-    || Boolean(state.newSourceBlob);
+    || Boolean(state.newSourceBlob)
+    || Boolean(state.logo2Blob);
 }
 
 function showDirty() {
@@ -1520,6 +1591,11 @@ async function buildFiles(fresh) {
     }
   }
 
+  if (state.logo2Blob) {
+    settings.secondLogo.version = String(Date.now());
+    files.push({ path: "logo2.png", content: state.logo2Blob });
+  }
+
   files.push({ path: "settings.js", content: settingsFile(settings) });
 
   if (Object.keys(state.pendingDays).length) {
@@ -1555,6 +1631,7 @@ $("publish").addEventListener("click", async () => {
       state.pendingDays = {};
     }
     state.newSourceBlob = null;
+    state.logo2Blob = null;
     fillForm();
     changed();
     if (!sha) {
@@ -1692,7 +1769,8 @@ async function readResponse(path, asBlob, response) {
     throw new Error(`${path}: HTTP ${response.status}`);
   }
   // Re-label images: through the GitHub API they arrive as application/vnd.github.raw.
-  return asBlob ? new Blob([await response.arrayBuffer()], { type: "image/jpeg" }) : response.text();
+  const type = path.endsWith(".png") ? "image/png" : "image/jpeg";
+  return asBlob ? new Blob([await response.arrayBuffer()], { type }) : response.text();
 }
 
 async function load() {
@@ -1785,6 +1863,7 @@ function normalizeSettings(loaded) {
     }
   }
   s.sabah = { ...DEFAULTS.sabah, ...(loaded.sabah || {}) };
+  s.secondLogo = { ...DEFAULTS.secondLogo, ...(loaded.secondLogo || {}) };
   s.hadiths = { ...clone(DEFAULTS.hadiths), ...(loaded.hadiths || {}) };
   if (!Array.isArray(s.hadiths.items)) {
     s.hadiths.items = clone(DEFAULTS.hadiths.items);

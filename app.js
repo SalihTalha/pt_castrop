@@ -607,9 +607,10 @@
 
   // Applies DISPLAY_SETTINGS. Missing values keep the defaults in style.css.
   // backdropSrc lets admin.html preview a background before it is saved.
-  function applySettings(newSettings, backdropSrc) {
+  function applySettings(newSettings, backdropSrc, logo2Src) {
     var s = newSettings || {};
     var image = s.backgroundImage || {};
+    var logo = s.secondLogo || {};
     var white = [255, 255, 255];
     var bg = hexToRgb(s.backgroundColor);
     var panel = hexToRgb(s.panelColor);
@@ -619,7 +620,7 @@
     var topBar, topText, bottomBar, bottomText, bottomNumber;
     var alpha = typeof s.panelOpacity === "number" ? s.panelOpacity : 0.7;
     var backdrop = byId("backdrop");
-    var src;
+    var src, ratio, logoWidth, logoHeight;
 
     settings = s;
 
@@ -658,6 +659,28 @@
         backdrop.setAttribute("src", src);
       }
       backdrop.style.display = "block";
+    }
+
+    // The second logo replaces the title on the right of the top bar: 4em
+    // high like the first logo, narrowed if wider than 20em, centred in its box.
+    if (logo.enabled && logo.width > 0 && logo.height > 0 && (logo2Src || logo.version)) {
+      ratio = logo.width / logo.height;
+      logoHeight = 4;
+      logoWidth = logoHeight * ratio;
+      if (logoWidth > 20) {
+        logoWidth = 20;
+        logoHeight = logoWidth / ratio;
+      }
+      byId("logo2").style.width = logoWidth + "em";
+      byId("logo2").style.height = logoHeight + "em";
+      byId("logo2").style.marginTop = (5.4 - logoHeight) / 2 + "em";
+      src = logo2Src || "logo2.png?v=" + logo.version;
+      if (byId("logo2").getAttribute("src") !== src) {
+        byId("logo2").setAttribute("src", src);
+      }
+      setClass("topbar", logo.white === false ? "panel has-logo2 logo2-plain" : "panel has-logo2");
+    } else {
+      setClass("topbar", "panel");
     }
 
     needsFit = true;
@@ -702,9 +725,9 @@
   };
 
   // Used by the live preview on admin.html.
-  window.applyDisplaySettings = function (newSettings, backdropSrc) {
+  window.applyDisplaySettings = function (newSettings, backdropSrc, logo2Src) {
     previewing = true;
-    applySettings(newSettings, backdropSrc);
+    applySettings(newSettings, backdropSrc, logo2Src);
   };
   window.refreshPrayerDisplay = render;
   window.setPreviewHadith = function (index) {

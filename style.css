@@ -108,6 +108,34 @@ body {
   white-space: nowrap;
 }
 
+/* Optional second logo: replaces the title on the right of the top bar.
+   app.js sizes the image (4em high, at most 20em wide). */
+#logo2-box {
+  display: none;
+  position: absolute;
+  right: 1em;
+  top: 0.9em;
+  height: 5.4em;
+  padding: 0 0.55em;
+  background: #ffffff;
+}
+
+#logo2 {
+  display: block;
+}
+
+.has-logo2 #logo2-box {
+  display: block;
+}
+
+.has-logo2 #title {
+  display: none;
+}
+
+.logo2-plain #logo2-box {
+  background: none;
+}
+
 #title-main {
   font-size: 2.6em;
   line-height: 1.15;
