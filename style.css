@@ -389,6 +389,56 @@ body {
   font-size: 4.4em;
 }
 
+/* Night closing: the whole screen is black (app.js adds .is-closed). In the
+   admin preview it is see-through with a note instead. */
+#night {
+  display: none;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: #000000;
+}
+
+#night.is-closed {
+  display: block;
+}
+
+#night.is-preview {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+#night-note {
+  display: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 45%;
+  color: #ffffff;
+  font-size: 2.4em;
+  text-align: center;
+}
+
+#night.is-preview #night-note {
+  display: block;
+}
+
+/* Keep-awake video: a playing video keeps many devices awake. 2px, almost
+   transparent, in a corner, and above the night overlay so it counts as
+   visible and keeps playing. */
+#keep-awake {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+  height: 2px;
+  opacity: 0.01;
+  z-index: 101;
+  pointer-events: none;
+}
+
 /* Without hadiths the prayer cards and panels use the full height. */
 
 .no-hadith #hadith-panel {

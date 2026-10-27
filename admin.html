@@ -357,6 +357,21 @@
     </section>
 
     <section>
+      <h2>Ekran açık kalsın, gece kapansın</h2>
+      <p class="hint" style="margin-top: 0">Ekran sayfası, tarayıcı izin veriyorsa ekranın uykuya geçmesini kendisi engeller. TV'nin kendi “otomatik kapanma / enerji tasarrufu” ayarını ise TV menüsünden kapatmak gerekir; bunu bir web sayfası değiştiremez.</p>
+      <label class="inline" style="margin-top: 10px"><input type="checkbox" id="f-keepAwakeVideo"> Görünmez, sessiz bir video oynat (birçok cihaz video oynarken uykuya geçmez)</label>
+      <label class="inline" style="margin-top: 6px"><input type="checkbox" id="f-keepAwakeJiggle"> Her 5 saniyede fareyi 1 piksel oynat</label>
+      <p class="hint">Ekran kilidi (tarayıcı destekliyorsa) her zaman açıktır. Fare hareketi sayfanın içinde kalır; TV'nin kendi kapanma zamanlayıcısı onu büyük ihtimalle görmez. Video ise bazı TV'lerde işe yarar. Bir TV videoyu tam ekran açarsa (namaz vakitleri kaybolursa) video seçeneğini kapatın.</p>
+      <label class="inline" style="margin-top: 10px"><input type="checkbox" id="f-nightEnabled"> Gece ekranı kapat (siyah ekran)</label>
+      <div class="grid" style="margin-top: 10px">
+        <label>Yatsı'dan kaç dakika sonra kapansın <input type="number" id="f-nightAfterYatsi" min="0" max="240" step="1"></label>
+        <label>Güneş'ten kaç dakika önce açılsın <input type="number" id="f-nightBeforeGunes" min="0" max="240" step="1"></label>
+      </div>
+      <p class="status" id="night-example"></p>
+      <p class="hint">Kapalıyken ekran siyah kalır ve açılış saatinde kendiliğinden geri gelir. Önizlemede kapalı saatler gölgeli gösterilir; “Bu zamanı göster” ile deneyebilirsiniz.</p>
+    </section>
+
+    <section>
       <h2>Namaz vakitleri</h2>
       <p id="prayer-summary">Yükleniyor…</p>
       <div class="row">
@@ -459,6 +474,15 @@ const DEFAULTS = {
   "sabah": {
     "enabled": true,
     "minutes": 30
+  },
+  "night": {
+    "enabled": false,
+    "afterYatsi": 60,
+    "beforeGunes": 60
+  },
+  "keepAwake": {
+    "video": true,
+    "jiggle": true
   },
   "texts": {
     "tr": {
@@ -643,6 +667,19 @@ const FIELDS = [
   { id: "bottomBarTextColor", read: (s) => s.bottomBarTextColor, write: (s, v) => { s.bottomBarTextColor = v; } },
   { id: "bottomBarNumberColor", read: (s) => s.bottomBarNumberColor, write: (s, v) => { s.bottomBarNumberColor = v; } },
   { id: "sabahEnabled", read: (s) => s.sabah.enabled, write: (s, v) => { s.sabah.enabled = v; } },
+  { id: "keepAwakeVideo", read: (s) => s.keepAwake.video !== false, write: (s, v) => { s.keepAwake.video = v; } },
+  { id: "keepAwakeJiggle", read: (s) => s.keepAwake.jiggle !== false, write: (s, v) => { s.keepAwake.jiggle = v; } },
+  { id: "nightEnabled", read: (s) => s.night.enabled, write: (s, v) => { s.night.enabled = v; } },
+  {
+    id: "nightAfterYatsi",
+    read: (s) => s.night.afterYatsi,
+    write: (s, v) => { s.night.afterYatsi = Math.min(240, Math.max(0, Math.round(v) || 0)); }
+  },
+  {
+    id: "nightBeforeGunes",
+    read: (s) => s.night.beforeGunes,
+    write: (s, v) => { s.night.beforeGunes = Math.min(240, Math.max(0, Math.round(v) || 0)); }
+  },
   {
     id: "sabahMinutes",
     read: (s) => s.sabah.minutes,
@@ -1320,6 +1357,7 @@ let previewTime = "";
 function changed() {
   showPrayerSummary();
   showSabahExample();
+  showNightExample();
   showLogo2Thumb();
   showDirty();
   clearTimeout(previewTimer);
@@ -1367,6 +1405,7 @@ function previewDocument() {
   const base = doc.createElement("base");
   base.href = SITE_BASE;
   doc.head.prepend(base);
+  doc.getElementById("keep-awake")?.remove();
   link.replaceWith(inline("style", previewCode.css));
   loader.replaceWith(inline("script",
     `var DISPLAY_SETTINGS = ${json(state.settings)};\nvar PRAYER_TIMES = ${json({ ...state.prayer, days: mergedPrayerDays() })};`));
@@ -1513,6 +1552,18 @@ function showSabahExample() {
   $("sabah-example").textContent = !sabah.enabled ? "Kapalı: ekranda gösterilmez."
     : day ? `Bugün: Güneş ${day.gunes} → ${state.settings.texts.tr.sabah || "Sabah namazı"} ${minusMinutes(day.gunes, sabah.minutes)}`
     : "Bugün için vakit bilgisi yok.";
+}
+
+function showNightExample() {
+  const night = state.settings.night;
+  const days = mergedPrayerDays();
+  const today = days[berlinToday()];
+  const tomorrow = days[addDay(berlinToday(), 1)];
+  $("night-example").textContent = !night.enabled ? "Kapalı: ekran gece de açık kalır."
+    : today && tomorrow
+      ? `Bu gece: Yatsı ${today.yatsi} + ${night.afterYatsi} dk → ${minusMinutes(today.yatsi, -night.afterYatsi)}'de kapanır; `
+        + `yarın Güneş ${tomorrow.gunes} − ${night.beforeGunes} dk → ${minusMinutes(tomorrow.gunes, night.beforeGunes)}'de açılır.`
+      : "Bu gece için vakit bilgisi eksik; vakit yoksa ekran açık kalır.";
 }
 
 function minusMinutes(hhmm, minutes) {
@@ -1863,6 +1914,8 @@ function normalizeSettings(loaded) {
     }
   }
   s.sabah = { ...DEFAULTS.sabah, ...(loaded.sabah || {}) };
+  s.night = { ...DEFAULTS.night, ...(loaded.night || {}) };
+  s.keepAwake = { ...DEFAULTS.keepAwake, ...(loaded.keepAwake || {}) };
   s.secondLogo = { ...DEFAULTS.secondLogo, ...(loaded.secondLogo || {}) };
   s.hadiths = { ...clone(DEFAULTS.hadiths), ...(loaded.hadiths || {}) };
   if (!Array.isArray(s.hadiths.items)) {

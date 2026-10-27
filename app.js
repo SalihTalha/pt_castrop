@@ -416,10 +416,155 @@
       setText("countdown", formatDuration(targetMs - nowMs));
     }
 
+    renderNight(nowMs, year, month, date);
+
     if (needsFit) {
       needsFit = false;
       fitTexts();
     }
+  }
+
+  // ---------- Night closing ----------
+
+  // From N minutes after Yatsı until M minutes before the next Güneş the
+  // screen is black (a page cannot switch the TV off). It keeps running, so
+  // it opens again by itself. In the admin preview it is only shaded.
+  function renderNight(nowMs, year, month, date) {
+    var night = settings.night;
+    // The night that began yesterday evening, or the one beginning tonight.
+    var opensMs = night && night.enabled
+      ? nightEnd(nowMs, year, month, date - 1) || nightEnd(nowMs, year, month, date)
+      : 0;
+    // Inside admin.html's preview frame it is only shaded, from the first frame on.
+    var preview = previewing || window.parent !== window;
+    var opens;
+    if (opensMs && preview) {
+      opens = toBerlin(opensMs);
+      setText("night-note", "Ekran şu an kapalı · açılış " + pad(opens.getUTCHours()) + ":" + pad(opens.getUTCMinutes()));
+    }
+    setClass("night", opensMs ? (preview ? "is-closed is-preview" : "is-closed") : "");
+  }
+
+  // When nowMs is in the night after Yatsı of the given day, returns the time
+  // the screen opens again, else 0. Works across midnight (late Yatsı in summer).
+  function nightEnd(nowMs, year, month, day) {
+    var night = settings.night;
+    var evening = getDay(year, month, day);
+    var morning = getDay(year, month, day + 1);
+    var start, end;
+    if (!evening || !morning) {
+      return 0;
+    }
+    start = prayerToUtc(year, month, day, evening.yatsi) + (Number(night.afterYatsi) || 0) * 60000;
+    end = prayerToUtc(year, month, day + 1, morning.gunes) - (Number(night.beforeGunes) || 0) * 60000;
+    return nowMs >= start && nowMs < end ? end : 0;
+  }
+
+  // ---------- Keeping the screen on ----------
+
+  // Asks the browser to keep the screen on (Screen Wake Lock API, modern
+  // browsers only; old TV browsers ignore this). The lock is lost when the
+  // page is hidden, so it is asked for again when the page is visible, on a
+  // key press or touch, and every minute. The TV's own "auto power off"
+  // setting is outside the page's reach.
+  var wakeLock = null;
+  var wakePending = false;
+
+  function keepScreenOn() {
+    if (window.parent !== window || !navigator.wakeLock || wakeLock || wakePending) {
+      return;
+    }
+    wakePending = true;
+    try {
+      navigator.wakeLock.request("screen").then(function (lock) {
+        wakePending = false;
+        wakeLock = lock;
+        lock.addEventListener("release", function () {
+          wakeLock = null;
+        });
+      }, function () {
+        wakePending = false;
+      });
+    } catch (error) {
+      wakePending = false;
+    }
+  }
+
+  // Every 5 seconds, everything a page can do to keep a TV awake (each can be
+  // switched off on admin.html): ask for the wake lock again if it was lost,
+  // keep the invisible video playing, and move the mouse 1 px.
+  function keepAwake() {
+    var options = settings.keepAwake || {};
+    keepScreenOn();
+    keepVideoPlaying(options.video !== false);
+    if (options.jiggle !== false) {
+      jiggleMouse();
+    }
+  }
+
+  // A playing video is a reason for many devices not to sleep. Some old TV
+  // browsers show every video in a full-screen player; if this one does, the
+  // video can be switched off on admin.html.
+  function keepVideoPlaying(on) {
+    var video = byId("keep-awake");
+    var result;
+    if (!video || !video.play) {
+      return;
+    }
+    if (!on || window.parent !== window) {
+      if (!video.paused) {
+        video.pause();
+      }
+      video.style.display = "none";
+      return;
+    }
+    video.style.display = "block";
+    video.muted = true;
+    if (video.paused) {
+      try {
+        result = video.play();
+        if (result && result.then) {
+          result.then(null, function () {});
+        }
+      } catch (error) {
+        // Not allowed yet; tried again in 5 seconds and on the next key press.
+      }
+    }
+  }
+
+  // A 1 px mouse movement inside the page. Browsers keep events made by a
+  // page inside the page, so the TV's own sleep timer most likely does not
+  // see it; the video and the wake lock are what can actually help.
+  var jiggleOffset = 0;
+
+  function jiggleMouse() {
+    var x, y, event;
+    jiggleOffset = 1 - jiggleOffset;
+    x = Math.floor((window.innerWidth || 2) / 2) + jiggleOffset;
+    y = Math.floor((window.innerHeight || 2) / 2);
+    try {
+      event = new MouseEvent("mousemove", { bubbles: true, clientX: x, clientY: y, screenX: x, screenY: y });
+    } catch (error) {
+      try {
+        event = document.createEvent("MouseEvents");
+        event.initMouseEvent("mousemove", true, true, window, 0, x, y, x, y, false, false, false, false, 0, null);
+      } catch (error2) {
+        return;
+      }
+    }
+    document.dispatchEvent(event);
+  }
+
+  // The Back key of many TV remotes would leave the page (or close the
+  // browser); this keeps it on the page where the browser allows it.
+  function stayOnPage() {
+    if (window.parent !== window || !window.history || !history.pushState) {
+      return;
+    }
+    history.pushState({ display: true }, "", location.href);
+    window.onpopstate = function () {
+      history.pushState({ display: true }, "", location.href);
+    };
   }
 
   // Shrinks one-line labels that are wider than their space, and the hadith
@@ -746,4 +891,15 @@
   refreshWeather();
   setInterval(refreshWeather, WEATHER_EVERY_MS);
   setInterval(refreshData, DATA_EVERY_MS);
+
+  keepAwake();
+  setInterval(keepAwake, 5000);
+  if (document.addEventListener) {
+    // Some browsers only allow the wake lock or video after a key press or touch.
+    document.addEventListener("visibilitychange", keepAwake);
+    document.addEventListener("keydown", keepAwake);
+    document.addEventListener("click", keepAwake);
+    document.addEventListener("touchstart", keepAwake);
+  }
+  stayOnPage();
 })();
