@@ -4,10 +4,6 @@
 // colours, texts, languages, hadiths and background from settings.js
 // (DISPLAY_SETTINGS), which admin.html writes.
 (function () {
-  var WEATHER_URL =
-    "https://api.open-meteo.com/v1/forecast?latitude=51.55&longitude=7.3167" +
-    "&current=temperature_2m,weather_code&timezone=Europe%2FBerlin";
-  var WEATHER_EVERY_MS = 30 * 60 * 1000;
   var DATA_EVERY_MS = 60 * 60 * 1000;
   var URGENT_MS = 5 * 60 * 1000;
   var PRAYER_KEYS = ["imsak", "gunes", "ogle", "ikindi", "aksam", "yatsi"];
@@ -24,9 +20,9 @@
     aksam: "Akşam",
     yatsi: "Yatsı",
     sabah: "Sabah namazı",
+    kerahat: "Kerahat",
     countdown: "{vakit} Vaktine Kalan Süre",
     clock: "Saat",
-    weather: "Hava Durumu",
     hadith: "Hadis-i Şerif",
     noData: "Bugün için vakit bilgisi yok"
   };
@@ -35,12 +31,11 @@
   var HIJRI_KEYS = ["muharrem", "safer", "rebiulevvel", "rebiulahir", "cemaziyelevvel", "cemaziyelahir",
     "recep", "saban", "ramazan", "sevval", "zilkade", "zilhicce"];
 
-  // Dates and weather words per language (not editable on admin.html).
+  // Dates per language (not editable on admin.html).
   var LOCALES = {
     tr: {
       months: ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"],
       weekdays: ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
-      weather: ["Açık", "Parçalı bulutlu", "Sisli", "Yağmurlu", "Karlı", "Fırtınalı", "Değişken", "Bilgi yok"],
       date: function (day, month, year, weekday) {
         return pad(day) + " " + month + " " + year + " " + weekday;
       }
@@ -48,7 +43,6 @@
     de: {
       months: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
       weekdays: ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"],
-      weather: ["Klar", "Teilweise bewölkt", "Neblig", "Regen", "Schnee", "Gewitter", "Wechselhaft", "Keine Daten"],
       hijriMonths: ["Muharram", "Safar", "Rabi al-Awwal", "Rabi al-Achir", "Dschumada al-Ula", "Dschumada al-Achira",
         "Radschab", "Schaban", "Ramadan", "Schawwal", "Dhu l-Qada", "Dhu l-Hiddscha"],
       date: function (day, month, year, weekday) {
@@ -62,7 +56,6 @@
       rtl: true,
       months: ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"],
       weekdays: ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"],
-      weather: ["صافٍ", "غائم جزئياً", "ضباب", "ممطر", "ثلوج", "عواصف رعدية", "متقلب", "لا توجد بيانات"],
       hijriMonths: ["محرم", "صفر", "ربيع الأول", "ربيع الآخر", "جمادى الأولى", "جمادى الآخرة",
         "رجب", "شعبان", "رمضان", "شوال", "ذو القعدة", "ذو الحجة"],
       date: function (day, month, year, weekday) {
@@ -79,7 +72,6 @@
   var needsFit = true;
   var testOffsetMs = 0;
   var pinnedLanguage = null;
-  var weatherNow = null;
   var previewing = false;
   var pinnedHadith = null;
 
@@ -339,18 +331,17 @@
     var beforeImsak = false;
     var targetMs = 0;
     var items = hadithItems();
-    var prayerMs, tomorrow, isUrgent, className, showSabah, i;
+    var prayerMs, tomorrow, isUrgent, className, showSabah, kerahat, kerahatNow, i;
 
     setText("clock", pad(now.getUTCHours()) + ":" + pad(now.getUTCMinutes()) + ":" + pad(now.getUTCSeconds()));
     setFitText("mosque-name-text", bidi(lang, t.mosqueName));
     setFitText("location-text", bidi(lang, t.location));
     setFitText("title-text", bidi(lang, t.title));
     setFitText("clock-title", bidi(lang, t.clock));
-    setFitText("weather-title", bidi(lang, t.weather));
     setFitText("hadith-title-text", bidi(lang, t.hadith));
     setFitText("date-text", bidi(lang, locale.date(date, locale.months[month], year, locale.weekdays[now.getUTCDay()])));
     setFitText("hijri-text", today && today.hicri ? bidi(lang, hijriDate(lang, today.hicri)) : " ");
-    setFitText("weather-label-text", bidi(lang, locale.weather[weatherKind(weatherNow ? weatherNow.weather_code : null)]));
+    renderMoon(today ? hijriDay(today.hicri) : 0);
 
     for (i = 0; i < PRAYER_KEYS.length; i++) {
       setFitText("name-" + PRAYER_KEYS[i], bidi(lang, t[PRAYER_KEYS[i]]));
@@ -387,6 +378,7 @@
     if (showSabah) {
       setFitText("sabah-text", bidi(lang, t.sabah + " " + minusMinutes(today.gunes, Number(settings.sabah.minutes) || 0)));
     }
+    kerahat = today ? renderKerahat(lang, t, today, nowMs, year, month, date) : null;
 
     if (!today) {
       setFitText("countdown-label-text", bidi(lang, t.noData));
@@ -400,8 +392,12 @@
 
       for (i = 0; i < PRAYER_KEYS.length; i++) {
         className = "panel prayer";
-        if (i === 0 && showSabah) {
-          className += " has-sabah";
+        kerahatNow = kerahat && ((i === 1 && kerahat.morning) || (i === 4 && kerahat.evening));
+        if ((i === 0 && showSabah) || kerahatNow) {
+          className += " has-sub";
+        }
+        if (kerahatNow) {
+          className += " kerahat-now";
         }
         if (i === nextIndex) {
           className += isUrgent ? " is-next is-urgent" : " is-next";
@@ -422,6 +418,30 @@
       needsFit = false;
       fitTexts();
     }
+  }
+
+  // ---------- Kerahat ----------
+
+  // The two periods when prayer is disliked: N minutes from Güneş, and the
+  // M minutes before Akşam. Writes them on the Güneş and Akşam cards (shown
+  // only while it is that time) and returns which is on now, or null when
+  // switched off.
+  function renderKerahat(lang, t, today, nowMs, year, month, date) {
+    var kerahat = settings.kerahat;
+    var after, before, morningEnd, eveningStart;
+    if (!kerahat || !kerahat.enabled) {
+      return null;
+    }
+    after = Number(kerahat.afterGunes) || 0;
+    before = Number(kerahat.beforeAksam) || 0;
+    morningEnd = minusMinutes(today.gunes, -after);
+    eveningStart = minusMinutes(today.aksam, before);
+    setFitText("kerahat-gunes-text", bidi(lang, t.kerahat + " " + today.gunes + "–" + morningEnd));
+    setFitText("kerahat-aksam-text", bidi(lang, t.kerahat + " " + eveningStart + "–" + today.aksam));
+    return {
+      morning: nowMs >= prayerToUtc(year, month, date, today.gunes) && nowMs < prayerToUtc(year, month, date, morningEnd),
+      evening: nowMs >= prayerToUtc(year, month, date, eveningStart) && nowMs < prayerToUtc(year, month, date, today.aksam)
+    };
   }
 
   // ---------- Night closing ----------
@@ -579,6 +599,10 @@
     if (byId("sabah-line")) {
       fitWidth(byId("sabah-text"), byId("sabah-line").offsetWidth - 1.6 * em);
     }
+    if (byId("kerahat-gunes-line")) {
+      fitWidth(byId("kerahat-gunes-text"), byId("kerahat-gunes-line").offsetWidth - 1.6 * em);
+      fitWidth(byId("kerahat-aksam-text"), byId("kerahat-aksam-line").offsetWidth - 1.6 * em);
+    }
     fitWidth(byId("countdown-label-text"), byId("countdown").offsetLeft - byId("countdown-label").offsetLeft - 1.5 * em);
     fitWidth(byId("mosque-name-text"), byId("brand").offsetWidth);
     fitWidth(byId("location-text"), byId("brand").offsetWidth);
@@ -586,9 +610,7 @@
     fitWidth(byId("hadith-title-text"), 10.3 * em);
     fitWidth(byId("clock-title"), 33 * em);
     fitWidth(byId("date-text"), 33 * em);
-    fitWidth(byId("hijri-text"), 33 * em);
-    fitWidth(byId("weather-title"), 33 * em);
-    fitWidth(byId("weather-label-text"), 33 * em);
+    fitWidth(byId("hijri-text"), 20 * em);
     fitHadith();
   }
 
@@ -623,65 +645,26 @@
     setTimeout(tick, 1020 - (new Date().getTime() % 1000));
   }
 
-  // ---------- Weather ----------
+  // ---------- Moon ----------
 
-  function refreshWeather() {
-    if (!window.XMLHttpRequest || !window.JSON) {
-      showWeather(null);
-      return;
-    }
-
-    var request = new XMLHttpRequest();
-    request.onreadystatechange = function () {
-      if (request.readyState !== 4) {
-        return;
-      }
-      var current = null;
-      try {
-        current = JSON.parse(request.responseText).current;
-      } catch (error) {
-        current = null;
-      }
-      showWeather(current && typeof current.temperature_2m === "number" ? current : null);
-    };
-
-    try {
-      request.open("GET", WEATHER_URL, true);
-      request.send();
-    } catch (error) {
-      showWeather(null);
-    }
+  // The day of the Hijri month, from Diyanet's "5 Cemaziyelevvel 1448".
+  function hijriDay(text) {
+    var match = /^(\d{1,2})\s/.exec(text || "");
+    var day = match ? parseInt(match[1], 10) : 0;
+    return day >= 1 && day <= 30 ? day : 0;
   }
 
-  function showWeather(current) {
-    weatherNow = current;
-    setText("weather-temp", current ? current.temperature_2m.toFixed(1).replace(".", ",") + " °C" : "--,- °C");
-  }
-
-  // Index into LOCALES[...].weather.
-  function weatherKind(code) {
-    if (code === null || code === undefined) {
-      return 7;
+  // There is one image per Hijri day: moon/moon-01.png to moon-30.png.
+  function renderMoon(day) {
+    var image = byId("moon-image");
+    var src = day ? "moon/moon-" + pad(day) + ".png" : "";
+    if (image && shown.moon !== src) {
+      shown.moon = src;
+      if (src) {
+        image.setAttribute("src", src);
+      }
+      image.style.display = src ? "block" : "none";
     }
-    if (code <= 1) {
-      return 0;
-    }
-    if (code <= 3) {
-      return 1;
-    }
-    if (code === 45 || code === 48) {
-      return 2;
-    }
-    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-      return 3;
-    }
-    if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
-      return 4;
-    }
-    if (code >= 95) {
-      return 5;
-    }
-    return 6;
   }
 
   // ---------- Settings ----------
@@ -779,12 +762,13 @@
         "html,body{background:" + hex(bg) + ";}" +
         "body{color:" + hex(text) + ";}" +
         ".panel{" + background(panel, alpha) + "border-color:" + hex(mix(panel, white, 0.65)) + ";}" +
-        ".label,#location,#weather-label,#hadith-source{color:" + hex(mix(text, panel, 0.25)) + ";}" +
-        "#hijri,#hadith-title,.prayer.is-next .prayer-time{color:" + hex(highlight) + ";}" +
+        ".label,#location,#hadith-source{color:" + hex(mix(text, panel, 0.25)) + ";}" +
+        "#hijri,#hadith-title,.prayer.is-next .prayer-time,.kerahat-now .prayer-sub{color:" + hex(highlight) + ";}" +
         ".prayer.is-next{" + background(next, alpha + 0.12) + "border-color:" + hex(highlight) + ";}" +
         ".prayer.is-urgent{" + background(mix(next, white, 0.15), alpha + 0.2) + "border-color:#ffffff;}" +
         ".prayer.is-urgent .prayer-name,.prayer.is-urgent .prayer-time{color:" + hex(mix(highlight, white, 0.5)) + ";}" +
         ".prayer.is-current{" + background(mix(panel, white, 0.72), alpha + 0.22) + "color:#111f22;}" +
+        ".prayer.is-current.kerahat-now{" + background(panel, alpha) + "color:" + hex(text) + ";}" +
         "#topbar{" + background(topBar, alpha) + "color:" + hex(topText) + ";}" +
         "#topbar #location{color:" + hex(mix(topText, topBar, 0.25)) + ";}" +
         "#countdown-panel{" + background(bottomBar, alpha + 0.05) + "color:" + hex(bottomText) + ";}" +
@@ -888,8 +872,6 @@
   fitToScreen();
   window.onresize = fitToScreen;
   tick();
-  refreshWeather();
-  setInterval(refreshWeather, WEATHER_EVERY_MS);
   setInterval(refreshData, DATA_EVERY_MS);
 
   keepAwake();

@@ -30,6 +30,11 @@ var DISPLAY_SETTINGS = {
     "enabled": true,
     "minutes": 30
   },
+  "kerahat": {
+    "enabled": true,
+    "afterGunes": 45,
+    "beforeAksam": 45
+  },
   "texts": {
     "tr": {
       "mosqueName": "IGMG Castrop-Rauxel Merkez Camii",
@@ -42,9 +47,9 @@ var DISPLAY_SETTINGS = {
       "aksam": "Akşam",
       "yatsi": "Yatsı",
       "sabah": "Sabah namazı",
+      "kerahat": "Kerahat",
       "countdown": "{vakit} Vaktine Kalan Süre",
       "clock": "Saat",
-      "weather": "Hava Durumu",
       "hadith": "Hadis-i Şerif",
       "noData": "Bugün için vakit bilgisi yok"
     },
@@ -59,9 +64,9 @@ var DISPLAY_SETTINGS = {
       "aksam": "Abend",
       "yatsi": "Nacht",
       "sabah": "Morgengebet",
+      "kerahat": "Kerahat-Zeit",
       "countdown": "Verbleibende Zeit bis {vakit}",
       "clock": "Uhrzeit",
-      "weather": "Wetter",
       "hadith": "Hadith",
       "noData": "Für heute keine Gebetszeiten vorhanden"
     },
@@ -76,9 +81,9 @@ var DISPLAY_SETTINGS = {
       "aksam": "المغرب",
       "yatsi": "العشاء",
       "sabah": "صلاة الفجر",
+      "kerahat": "وقت الكراهة",
       "countdown": "الوقت المتبقي حتى {vakit}",
       "clock": "الساعة",
-      "weather": "الطقس",
       "hadith": "حديث شريف",
       "noData": "لا توجد مواقيت لهذا اليوم"
     }

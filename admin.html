@@ -255,7 +255,7 @@
           </select>
         </label>
       </div>
-      <p class="hint">Seçili diller ekranda sırayla gösterilir; tüm ekranlar aynı anda değişir. Saatler her dilde aynıdır. Tarih, hicri ay ve hava durumu kendiliğinden çevrilir.</p>
+      <p class="hint">Seçili diller ekranda sırayla gösterilir; tüm ekranlar aynı anda değişir. Saatler her dilde aynıdır. Tarih ve hicri ay kendiliğinden çevrilir.</p>
       <div class="texts-table" id="texts-table"></div>
       <p class="hint">Boş bırakılan çeviri yerine Türkçesi gösterilir. Uzun metinler kutularına sığacak kadar küçültülür.</p>
     </section>
@@ -354,6 +354,17 @@
       </div>
       <p class="status" id="sabah-example"></p>
       <p class="hint">Her gün o günün güneş vaktinden hesaplanır. Yazısı “Diller ve yazılar” tablosundaki “Sabah namazı” satırından değiştirilebilir.</p>
+    </section>
+
+    <section>
+      <h2>Kerahat vakti</h2>
+      <label class="inline"><input type="checkbox" id="f-kerahatEnabled"> Kerahat vaktini Güneş ve Akşam kutularında göster</label>
+      <div class="grid" style="margin-top: 10px">
+        <label>Güneşten sonra kaç dakika <input type="number" id="f-kerahatAfterGunes" min="0" max="180" step="1"></label>
+        <label>Akşamdan önce kaç dakika <input type="number" id="f-kerahatBeforeAksam" min="0" max="180" step="1"></label>
+      </div>
+      <p class="status" id="kerahat-example"></p>
+      <p class="hint">Her gün o günün vakitlerinden hesaplanır. Satır yalnızca kerahat vakti içindeyken görünür. Yazısı “Diller ve yazılar” tablosundaki “Kerahat” satırından değiştirilebilir.</p>
     </section>
 
     <section>
@@ -475,6 +486,11 @@ const DEFAULTS = {
     "enabled": true,
     "minutes": 30
   },
+  "kerahat": {
+    "enabled": true,
+    "afterGunes": 45,
+    "beforeAksam": 45
+  },
   "night": {
     "enabled": false,
     "afterYatsi": 60,
@@ -496,9 +512,9 @@ const DEFAULTS = {
       "aksam": "Akşam",
       "yatsi": "Yatsı",
       "sabah": "Sabah namazı",
+      "kerahat": "Kerahat",
       "countdown": "{vakit} Vaktine Kalan Süre",
       "clock": "Saat",
-      "weather": "Hava Durumu",
       "hadith": "Hadis-i Şerif",
       "noData": "Bugün için vakit bilgisi yok"
     },
@@ -513,9 +529,9 @@ const DEFAULTS = {
       "aksam": "Abend",
       "yatsi": "Nacht",
       "sabah": "Morgengebet",
+      "kerahat": "Kerahat-Zeit",
       "countdown": "Verbleibende Zeit bis {vakit}",
       "clock": "Uhrzeit",
-      "weather": "Wetter",
       "hadith": "Hadith",
       "noData": "Für heute keine Gebetszeiten vorhanden"
     },
@@ -530,9 +546,9 @@ const DEFAULTS = {
       "aksam": "المغرب",
       "yatsi": "العشاء",
       "sabah": "صلاة الفجر",
+      "kerahat": "وقت الكراهة",
       "countdown": "الوقت المتبقي حتى {vakit}",
       "clock": "الساعة",
-      "weather": "الطقس",
       "hadith": "حديث شريف",
       "noData": "لا توجد مواقيت لهذا اليوم"
     }
@@ -621,8 +637,8 @@ const LANGS = [["tr", "Türkçe"], ["de", "Almanca"], ["ar", "Arapça"]];
 const TEXT_FIELDS = [
   ["mosqueName", "Cami adı"], ["location", "Konum"], ["title", "Başlık"],
   ["imsak", "İmsak"], ["gunes", "Güneş"], ["ogle", "Öğle"], ["ikindi", "İkindi"], ["aksam", "Akşam"], ["yatsi", "Yatsı"],
-  ["sabah", "Sabah namazı"],
-  ["countdown", "Geri sayım ({vakit} = vakit adı)"], ["clock", "Saat başlığı"], ["weather", "Hava durumu başlığı"],
+  ["sabah", "Sabah namazı"], ["kerahat", "Kerahat"],
+  ["countdown", "Geri sayım ({vakit} = vakit adı)"], ["clock", "Saat başlığı"],
   ["hadith", "Hadis başlığı"], ["noData", "Vakit bilgisi yoksa"]
 ];
 const SCREEN_W = 1920;
@@ -667,6 +683,17 @@ const FIELDS = [
   { id: "bottomBarTextColor", read: (s) => s.bottomBarTextColor, write: (s, v) => { s.bottomBarTextColor = v; } },
   { id: "bottomBarNumberColor", read: (s) => s.bottomBarNumberColor, write: (s, v) => { s.bottomBarNumberColor = v; } },
   { id: "sabahEnabled", read: (s) => s.sabah.enabled, write: (s, v) => { s.sabah.enabled = v; } },
+  { id: "kerahatEnabled", read: (s) => s.kerahat.enabled, write: (s, v) => { s.kerahat.enabled = v; } },
+  {
+    id: "kerahatAfterGunes",
+    read: (s) => s.kerahat.afterGunes,
+    write: (s, v) => { s.kerahat.afterGunes = Math.min(180, Math.max(0, Math.round(v) || 0)); }
+  },
+  {
+    id: "kerahatBeforeAksam",
+    read: (s) => s.kerahat.beforeAksam,
+    write: (s, v) => { s.kerahat.beforeAksam = Math.min(180, Math.max(0, Math.round(v) || 0)); }
+  },
   { id: "keepAwakeVideo", read: (s) => s.keepAwake.video !== false, write: (s, v) => { s.keepAwake.video = v; } },
   { id: "keepAwakeJiggle", read: (s) => s.keepAwake.jiggle !== false, write: (s, v) => { s.keepAwake.jiggle = v; } },
   { id: "nightEnabled", read: (s) => s.night.enabled, write: (s, v) => { s.night.enabled = v; } },
@@ -1357,6 +1384,7 @@ let previewTime = "";
 function changed() {
   showPrayerSummary();
   showSabahExample();
+  showKerahatExample();
   showNightExample();
   showLogo2Thumb();
   showDirty();
@@ -1551,6 +1579,14 @@ function showSabahExample() {
   const day = mergedPrayerDays()[berlinToday()];
   $("sabah-example").textContent = !sabah.enabled ? "Kapalı: ekranda gösterilmez."
     : day ? `Bugün: Güneş ${day.gunes} → ${state.settings.texts.tr.sabah || "Sabah namazı"} ${minusMinutes(day.gunes, sabah.minutes)}`
+    : "Bugün için vakit bilgisi yok.";
+}
+
+function showKerahatExample() {
+  const kerahat = state.settings.kerahat;
+  const day = mergedPrayerDays()[berlinToday()];
+  $("kerahat-example").textContent = !kerahat.enabled ? "Kapalı: ekranda gösterilmez."
+    : day ? `Bugün: ${day.gunes}–${minusMinutes(day.gunes, -kerahat.afterGunes)} ve ${minusMinutes(day.aksam, kerahat.beforeAksam)}–${day.aksam}`
     : "Bugün için vakit bilgisi yok.";
 }
 
@@ -1887,6 +1923,7 @@ function normalizeSettings(loaded) {
   s.texts = {};
   for (const [lang] of LANGS) {
     s.texts[lang] = { ...DEFAULTS.texts[lang], ...((loaded.texts || {})[lang] || {}) };
+    delete s.texts[lang].weather;   // the weather panel became the moon panel
   }
   // Before translations existed the name and location were top-level fields.
   if (loaded.mosqueName && !(loaded.texts && loaded.texts.tr && loaded.texts.tr.mosqueName)) {
@@ -1914,6 +1951,7 @@ function normalizeSettings(loaded) {
     }
   }
   s.sabah = { ...DEFAULTS.sabah, ...(loaded.sabah || {}) };
+  s.kerahat = { ...DEFAULTS.kerahat, ...(loaded.kerahat || {}) };
   s.night = { ...DEFAULTS.night, ...(loaded.night || {}) };
   s.keepAwake = { ...DEFAULTS.keepAwake, ...(loaded.keepAwake || {}) };
   s.secondLogo = { ...DEFAULTS.secondLogo, ...(loaded.secondLogo || {}) };
