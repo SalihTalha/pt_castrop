@@ -4,7 +4,9 @@
 // colours, texts, languages, hadiths and background from settings.js
 // (DISPLAY_SETTINGS), which admin.html writes.
 (function () {
-  var DATA_EVERY_MS = 60 * 60 * 1000;
+  var SETTINGS_EVERY_MS = 60 * 60 * 1000;
+  // prayer-times.js holds 10 years (about half a megabyte) and changes rarely.
+  var PRAYER_TIMES_EVERY_MS = 24 * 60 * 60 * 1000;
   var URGENT_MS = 5 * 60 * 1000;
   var PRAYER_KEYS = ["imsak", "gunes", "ogle", "ikindi", "aksam", "yatsi"];
 
@@ -718,10 +720,11 @@
 
   // ---------- Settings ----------
 
-  // Load settings.js and prayer-times.js again every hour, so changes saved on
-  // admin.html reach the TV without a page reload. If loading fails, the
-  // current data stays.
-  function refreshData() {
+  // Load settings.js again every hour and prayer-times.js every day, so
+  // changes saved on admin.html reach the TV without a page reload. If loading
+  // fails, the current data stays: once loaded, the page has 10 years of
+  // prayer times and needs nothing else to keep working.
+  function refreshSettings() {
     if (previewing) {
       // admin.html's preview supplies its own (unsaved) settings.
       return;
@@ -729,7 +732,12 @@
     reloadScript("settings.js", function () {
       applySettings(window.DISPLAY_SETTINGS);
     });
-    reloadScript("prayer-times.js", render);
+  }
+
+  function refreshPrayerTimes() {
+    if (!previewing) {
+      reloadScript("prayer-times.js", render);
+    }
   }
 
   function reloadScript(name, done) {
@@ -921,7 +929,8 @@
   fitToScreen();
   window.onresize = fitToScreen;
   tick();
-  setInterval(refreshData, DATA_EVERY_MS);
+  setInterval(refreshSettings, SETTINGS_EVERY_MS);
+  setInterval(refreshPrayerTimes, PRAYER_TIMES_EVERY_MS);
 
   keepAwake();
   setInterval(keepAwake, 5000);

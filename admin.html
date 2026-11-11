@@ -1342,9 +1342,14 @@ function showPrayerSummary() {
     }
   }
   const pending = Object.keys(state.pendingDays).length;
+  const merged = mergedPrayerDays();
+  const calculated = dates.filter((date) => merged[date].calc);
   $("prayer-summary").textContent =
     `${dates.length} gün var: ${formatDate(dates[0])} – ${formatDate(dates.at(-1))}.` +
     (gaps.length ? ` Eksik: ${gaps.join(", ")}.` : " Eksik gün yok.") +
+    (calculated.length
+      ? ` Diyanet'in resmi vakitleri ${formatDate(addDay(calculated[0], -1))} tarihine kadar; sonrası hesaplanmış (vakitler ±1 dakika, hicri tarih bazı aylarda ±1 gün). Resmi vakitler geldikçe (API düğmesi ya da betik) yerlerini alır.`
+      : "") +
     (pending ? ` (${pending} gün henüz yayınlanmadı.)` : "");
 }
 
