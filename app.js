@@ -654,16 +654,65 @@
     return day >= 1 && day <= 30 ? day : 0;
   }
 
-  // There is one image per Hijri day: moon/moon-01.png to moon-30.png.
-  function renderMoon(day) {
-    var image = byId("moon-image");
-    var src = day ? "moon/moon-" + pad(day) + ".png" : "";
-    if (image && shown.moon !== src) {
-      shown.moon = src;
-      if (src) {
-        image.setAttribute("src", src);
+  // There is one image per Hijri day: moon/moon-01.png to moon-30.png. The
+  // screen stays open for weeks and may be offline at midnight, so all 30
+  // are loaded at the start and kept in the page; changing the moon then
+  // needs no download. Images that fail to load are tried again every 10
+  // minutes, and are not shown until they have loaded.
+  var moonImages = [];
+
+  function loadMoonImages() {
+    var panel = byId("moon-panel");
+    var day;
+    if (!panel || moonImages.length) {
+      return;
+    }
+    for (day = 1; day <= 30; day++) {
+      moonImages[day] = createMoonImage(panel, day);
+    }
+    setInterval(retryMoonImages, 10 * 60 * 1000);
+  }
+
+  function createMoonImage(panel, day) {
+    var image = document.createElement("img");
+    image.className = "moon-image";
+    image.alt = "";
+    image.style.display = "none";
+    image.onload = function () {
+      image.loaded = true;
+      image.failed = false;
+      shown.moonDay = null;
+    };
+    image.onerror = function () {
+      image.failed = true;
+      shown.moonDay = null;
+    };
+    image.src = "moon/moon-" + pad(day) + ".png";
+    panel.appendChild(image);
+    return image;
+  }
+
+  function retryMoonImages() {
+    var day;
+    for (day = 1; day <= 30; day++) {
+      if (moonImages[day] && moonImages[day].failed && !moonImages[day].loaded) {
+        moonImages[day].failed = false;
+        moonImages[day].src = "moon/moon-" + pad(day) + ".png?retry=" + new Date().getTime();
       }
-      image.style.display = src ? "block" : "none";
+    }
+  }
+
+  function renderMoon(day) {
+    var i;
+    loadMoonImages();
+    if (shown.moonDay === day) {
+      return;
+    }
+    shown.moonDay = day;
+    for (i = 1; i <= 30; i++) {
+      if (moonImages[i]) {
+        moonImages[i].style.display = i === day && moonImages[i].loaded ? "block" : "none";
+      }
     }
   }
 

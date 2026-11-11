@@ -308,8 +308,8 @@ body {
   line-height: 1.2;
 }
 
-/* The moon of the Hijri day; app.js sets the image and shows it. */
-#moon-image {
+/* The moon of the Hijri day: app.js adds all 30 images and shows one. */
+.moon-image {
   display: none;
   position: absolute;
   left: 2.6em;
