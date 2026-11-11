@@ -1,0 +1,53 @@
+name: Update prayer times
+
+# Every week: fetch Diyanet's newest official prayer times (published about a
+# year ahead) so they replace calculated days in prayer-times.js, and keep the
+# file filled 10 years ahead. Also runs by hand (Actions > Run workflow).
+# If Diyanet cannot be reached the file is left unchanged and the run fails,
+# so GitHub sends an email.
+on:
+  schedule:
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  actions: write
+
+concurrency:
+  group: update-prayer-times
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch prayer times
+        run: node scripts/fetch-prayer-times.mjs
+
+      - name: Commit and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
+          git add prayer-times.js
+          if git diff --cached --quiet; then
+            echo "Prayer times unchanged."
+            exit 0
+          fi
+          git commit -m "Update prayer times"
+          git push
+          # A push made by a workflow does not start other workflows, so ask
+          # GitHub Pages for a new build, or else start the deploy workflow.
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/pages/builds" \
+            || gh workflow run deploy.yml --ref main
