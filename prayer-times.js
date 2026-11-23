@@ -2,15 +2,8 @@
 var PRAYER_TIMES = {
   "city": "Castrop-Rauxel",
   "districtId": "10964",
-  "generatedAt": "2026-11-16T11:43:18.435Z",
+  "generatedAt": "2026-11-23T13:12:08.638Z",
   "days": {
-    "2026-11-16": {"hicri":"7 Cemaziyelahir 1448","imsak":"05:53","gunes":"07:43","ogle":"12:20","ikindi":"14:22","aksam":"16:48","yatsi":"18:25"},
-    "2026-11-17": {"hicri":"8 Cemaziyelahir 1448","imsak":"05:54","gunes":"07:45","ogle":"12:21","ikindi":"14:21","aksam":"16:46","yatsi":"18:24"},
-    "2026-11-18": {"hicri":"9 Cemaziyelahir 1448","imsak":"05:56","gunes":"07:46","ogle":"12:21","ikindi":"14:20","aksam":"16:45","yatsi":"18:23"},
-    "2026-11-19": {"hicri":"10 Cemaziyelahir 1448","imsak":"05:57","gunes":"07:48","ogle":"12:21","ikindi":"14:19","aksam":"16:44","yatsi":"18:22"},
-    "2026-11-20": {"hicri":"11 Cemaziyelahir 1448","imsak":"05:58","gunes":"07:50","ogle":"12:21","ikindi":"14:18","aksam":"16:43","yatsi":"18:21"},
-    "2026-11-21": {"hicri":"12 Cemaziyelahir 1448","imsak":"06:00","gunes":"07:51","ogle":"12:21","ikindi":"14:18","aksam":"16:42","yatsi":"18:20"},
-    "2026-11-22": {"hicri":"13 Cemaziyelahir 1448","imsak":"06:01","gunes":"07:53","ogle":"12:22","ikindi":"14:17","aksam":"16:40","yatsi":"18:19"},
     "2026-11-23": {"hicri":"14 Cemaziyelahir 1448","imsak":"06:02","gunes":"07:55","ogle":"12:22","ikindi":"14:16","aksam":"16:39","yatsi":"18:19"},
     "2026-11-24": {"hicri":"15 Cemaziyelahir 1448","imsak":"06:04","gunes":"07:56","ogle":"12:22","ikindi":"14:15","aksam":"16:38","yatsi":"18:18"},
     "2026-11-25": {"hicri":"16 Cemaziyelahir 1448","imsak":"06:05","gunes":"07:58","ogle":"12:23","ikindi":"14:14","aksam":"16:37","yatsi":"18:17"},
